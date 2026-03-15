@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QMap>
 #include <QHostAddress>
+#include <QTimer>
 #include "networkmanager.h"
 #include "packet.h"
 
@@ -18,9 +19,11 @@ private:
     NetworkManager * nm;
     QMap<QString,Peer> peers;
     QString name;
+    QTimer *aliveTimer;
     void handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
     void setAlive(QString name, QHostAddress ip);
     void sendAliveStatus();
+    void timerTick();
 
 
 signals:

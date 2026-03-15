@@ -38,17 +38,36 @@ void NetworkManager::onUdpReadyRead() {
     while (udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = udpSocket->receiveDatagram();
         QHostAddress senderIp = datagram.senderAddress();
+
+        // 1. Приводим адрес отправителя к чистому IPv4
+        bool ok;
+        quint32 senderIpv4 = senderIp.toIPv4Address(&ok);
+
         bool isOwnIp = false;
         const QList<QHostAddress> localhostAddresses = QNetworkInterface::allAddresses();
+
         for (const QHostAddress &address : localhostAddresses) {
+            // 2. Приводим локальный адрес к чистому IPv4 для сравнения
+            bool localOk;
+            quint32 localIpv4 = address.toIPv4Address(&localOk);
+
+            // Если оба адреса удалось привести к IPv4 и они совпали
+            if (ok && localOk && senderIpv4 == localIpv4) {
+                isOwnIp = true;
+                break;
+            }
+
+            // На всякий случай проверяем прямое совпадение (для чистого IPv6)
             if (senderIp == address) {
                 isOwnIp = true;
                 break;
             }
         }
+
         if (isOwnIp) {
             continue;
         }
+
         emit dataReceived(datagram.data(), senderIp, Protocol::UDP);
     }
 }
