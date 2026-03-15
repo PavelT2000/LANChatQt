@@ -1,7 +1,7 @@
 #include "chatengine.h"
 
 ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
-    : QObject{parent}
+    :name(name), QObject{parent}
 {
     nm=new NetworkManager(port, this);
     nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
@@ -20,7 +20,9 @@ void ChatEngine::handlePocket(const QByteArray &data, const QHostAddress &sender
     case MessageType::ALIVE:
         setAlive(msg.senderName,senderIp);
         break;
-    case MessageType::MESSAGE:break;
+    case MessageType::MESSAGE:
+        qDebug()<<msg.content;
+        break;
     case MessageType::DEACTIVE:break;
 
     }
@@ -47,5 +49,16 @@ void ChatEngine::setAlive(QString name, QHostAddress ip)
 void ChatEngine::sendAliveStatus()
 {
 
+}
+
+void ChatEngine::sendMessage(QString text)
+{
+    Packet pkg(MessageType::MESSAGE, name, text);
+    QByteArray data = pkg.toBytes();
+
+    for (const Peer &peer : peers) {
+        nm->sendDataTo(data, peer.ip);
+        qDebug() << "Отправка сообщения для:" << peer.name << "на IP:" << peer.ip.toString();
+    }
 }
 

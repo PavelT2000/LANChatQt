@@ -16,9 +16,11 @@ public:
 private:
     NetworkManager * nm;
     QMap<QString,Peer> peers;
+    QString name;
     void handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
     void setAlive(QString name, QHostAddress ip);
     void sendAliveStatus();
+    void sendMessage(QString text);
 
 signals:
 };

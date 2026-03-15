@@ -7,6 +7,7 @@
 #include <QHostAddress>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QNetworkInterface>
 
 struct Peer {
     QHostAddress ip;

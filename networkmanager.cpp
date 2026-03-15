@@ -5,7 +5,7 @@ NetworkManager::NetworkManager(ushort port, QObject *parent)
 {
     // Настройка UDP
     udpSocket = new QUdpSocket(this);
-    udpSocket->bind(m_port, QUdpSocket::ShareAddress);
+    udpSocket->bind(QHostAddress::Any, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     connect(udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
 
     // Настройка TCP Сервера (ждем входящие)
@@ -37,7 +37,19 @@ bool NetworkManager::sendDataTo(const QByteArray &data, const QHostAddress &targ
 void NetworkManager::onUdpReadyRead() {
     while (udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = udpSocket->receiveDatagram();
-        emit dataReceived(datagram.data(), datagram.senderAddress(), Protocol::UDP);
+        QHostAddress senderIp = datagram.senderAddress();
+        bool isOwnIp = false;
+        const QList<QHostAddress> localhostAddresses = QNetworkInterface::allAddresses();
+        for (const QHostAddress &address : localhostAddresses) {
+            if (senderIp == address) {
+                isOwnIp = true;
+                break;
+            }
+        }
+        if (isOwnIp) {
+            continue;
+        }
+        emit dataReceived(datagram.data(), senderIp, Protocol::UDP);
     }
 }
 
