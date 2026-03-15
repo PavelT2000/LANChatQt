@@ -27,16 +27,18 @@ public:
     // Если для UDP пир не указан (Null), шлем Broadcast
     bool sendDataBroadcast(const QByteArray &data);
     bool sendDataTo(const QByteArray &data, const QHostAddress &targetIp);
+    void establishConnection(const QHostAddress &ip);
 
 signals:
     // ПОЛУЧИТЬ(данные, пир_отправитель)
     void dataReceived(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
 
+
 private slots:
     void onUdpReadyRead();
     void onNewTcpConnection();
     void onTcpReadyRead();
-    void establishConnection(const QHostAddress &ip);
+
 
 private:
     QUdpSocket *udpSocket;

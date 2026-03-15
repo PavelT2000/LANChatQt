@@ -35,11 +35,12 @@ void ChatEngine::setAlive(QString name, QHostAddress ip)
         peers[ipStr].name = name;
         peers[ipStr].liveStatus =0;
     } else {
+
         Peer newPeer;
         newPeer.ip = ip;
         newPeer.name = name;
         newPeer.liveStatus = 0;
-
+        nm->establishConnection(newPeer.ip);
         peers.insert(ipStr, newPeer);
 
         qDebug() << "Обнаружен новый узел:" << name << "[" << ipStr << "]";

@@ -60,6 +60,7 @@ void NetworkManager::onNewTcpConnection() {
 }
 
 void NetworkManager::onTcpReadyRead() {
+    qDebug() << "Tcp";
     QTcpSocket *s = qobject_cast<QTcpSocket*>(sender());
     if (s) {
         emit dataReceived(s->readAll(), s->peerAddress(), Protocol::TCP);
