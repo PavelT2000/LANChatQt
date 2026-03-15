@@ -1,0 +1,77 @@
+#include "networkmanager.h"
+
+NetworkManager::NetworkManager(ushort port, QObject *parent)
+    : QObject(parent), m_port(port)
+{
+    // Настройка UDP
+    udpSocket = new QUdpSocket(this);
+    udpSocket->bind(m_port, QUdpSocket::ShareAddress);
+    connect(udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
+
+    // Настройка TCP Сервера (ждем входящие)
+    tcpServer = new QTcpServer(this);
+    tcpServer->listen(QHostAddress::Any, m_port);
+    connect(tcpServer, &QTcpServer::newConnection, this, &NetworkManager::onNewTcpConnection);
+}
+
+bool NetworkManager::sendDataBroadcast(const QByteArray &data)
+{
+    qint64 bytesSent = udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_port);
+    return (bytesSent != -1);
+}
+
+bool NetworkManager::sendDataTo(const QByteArray &data, const QHostAddress &targetIp)
+{
+    for (QTcpSocket* s : tcpConnections) {
+        if (s->peerAddress() == targetIp) {
+            qint64 bytesWritten = s->write(data);
+            s->flush();
+            return (bytesWritten != -1 && s->flush());
+        }
+    }
+    return false; // Пир с таким IP не найден в активных соединениях
+}
+
+
+
+void NetworkManager::onUdpReadyRead() {
+    while (udpSocket->hasPendingDatagrams()) {
+        QNetworkDatagram datagram = udpSocket->receiveDatagram();
+        emit dataReceived(datagram.data(), datagram.senderAddress(), Protocol::UDP);
+    }
+}
+
+void NetworkManager::onNewTcpConnection() {
+    QTcpSocket *clientSocket = tcpServer->nextPendingConnection();
+    tcpConnections.append(clientSocket);
+    connect(clientSocket, &QTcpSocket::readyRead, this, &NetworkManager::onTcpReadyRead);
+}
+
+void NetworkManager::onTcpReadyRead() {
+    QTcpSocket *s = qobject_cast<QTcpSocket*>(sender());
+    if (s) {
+        emit dataReceived(s->readAll(), s->peerAddress(), Protocol::TCP);
+    }
+}
+
+void NetworkManager::establishConnection(const QHostAddress &ip) {
+    for (QTcpSocket* s : tcpConnections)
+    {
+        if (s->peerAddress() == ip) return;
+    }
+    QTcpSocket *socket = new QTcpSocket(this);
+
+    connect(socket, &QTcpSocket::readyRead, this, &NetworkManager::onTcpReadyRead);
+
+
+    connect(socket, &QTcpSocket::disconnected, this, [this, socket]() {
+        tcpConnections.removeAll(socket);
+        socket->deleteLater();
+        qDebug() << "Соединение разорвано:" << socket->peerAddress().toString();
+    });
+
+    socket->connectToHost(ip, m_port);
+
+    tcpConnections.append(socket);
+    qDebug() << "Попытка установить связь с:" << ip.toString();
+}
