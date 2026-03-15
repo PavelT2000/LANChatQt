@@ -12,6 +12,7 @@ class ChatEngine : public QObject
     Q_OBJECT
 public:
     explicit ChatEngine(ushort port, QString name, QObject *parent = nullptr);
+    void sendMessage(QString text);
 
 private:
     NetworkManager * nm;
@@ -20,7 +21,7 @@ private:
     void handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
     void setAlive(QString name, QHostAddress ip);
     void sendAliveStatus();
-    void sendMessage(QString text);
+
 
 signals:
 };

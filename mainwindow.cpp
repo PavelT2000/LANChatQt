@@ -20,3 +20,9 @@ void MainWindow::on_pushButton_clicked()
 
 }
 
+
+void MainWindow::on_pushButton_2_clicked()
+{
+    chat->sendMessage(ui->textEdit_2->toPlainText());
+}
+
