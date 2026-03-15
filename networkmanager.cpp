@@ -97,13 +97,35 @@ void NetworkManager::establishConnection(const QHostAddress &ip) {
 
 
     connect(socket, &QTcpSocket::disconnected, this, [this, socket]() {
-        tcpConnections.removeAll(socket);
-        socket->deleteLater();
-        qDebug() << "Соединение разорвано:" << socket->peerAddress().toString();
+        QHostAddress addr = socket->peerAddress();
+        tcpConnections.removeAll(socket); // Удаляем из списка
+        emit peerDisconnected(addr);      // Уведомляем ChatEngine
+        socket->deleteLater();            // Безопасно удаляем объект
     });
 
     socket->connectToHost(ip, m_port);
 
     tcpConnections.append(socket);
     qDebug() << "Попытка установить связь с:" << ip.toString();
+}
+
+void NetworkManager::disconnectIp(QHostAddress ip)
+{
+    // Используем итератор, так как будем удалять элементы во время обхода
+    auto it = tcpConnections.begin();
+    while (it != tcpConnections.end()) {
+        QTcpSocket* socket = *it;
+
+        // Сравниваем IP (учитывая возможные IPv6-префиксы)
+        if (socket->peerAddress().toIPv4Address() == ip.toIPv4Address()) {
+
+
+            socket->disconnectFromHost();
+
+            it = tcpConnections.erase(it);
+            socket->deleteLater();
+        } else {
+            ++it;
+        }
+    }
 }

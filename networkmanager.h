@@ -28,11 +28,12 @@ public:
     bool sendDataBroadcast(const QByteArray &data);
     bool sendDataTo(const QByteArray &data, const QHostAddress &targetIp);
     void establishConnection(const QHostAddress &ip);
+    void disconnectIp(QHostAddress ip);
 
 signals:
     // ПОЛУЧИТЬ(данные, пир_отправитель)
     void dataReceived(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
-
+    void peerDisconnected(QHostAddress &addr);
 
 private slots:
     void onUdpReadyRead();

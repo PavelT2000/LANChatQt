@@ -6,6 +6,7 @@ ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
     nm=new NetworkManager(port, this);
     nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
     connect(nm, &NetworkManager::dataReceived, this, &ChatEngine::handlePocket);
+    connect(nm, &NetworkManager::peerDisconnected, this, &ChatEngine::peerDisconected);
     aliveTimer = new QTimer(this);
     connect(aliveTimer, &QTimer::timeout, this, &ChatEngine::timerTick);
     aliveTimer->start(5000);
@@ -56,6 +57,7 @@ void ChatEngine::sendAliveStatus()
 void ChatEngine::timerTick()
 {
     qDebug()<<"HeartBeat";
+    nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
     auto it = peers.begin();
     while (it != peers.end()) {
         // Увеличиваем счетчик отсутствия
@@ -64,10 +66,26 @@ void ChatEngine::timerTick()
         // Если пир не подавал признаков жизни более 3-х проверок
         if (it.value().liveStatus > 2) {
             qDebug() << "Удаляем замолчавшего:" << it.value().name;
+            nm->disconnectIp(it.value().ip);
             it = peers.erase(it);
         } else {
             ++it;
         }
+    }
+}
+
+void ChatEngine::peerDisconected(QHostAddress &addr)
+{
+    bool ok;
+    quint32 ipv4 = addr.toIPv4Address(&ok);
+    QString ipStr = ok ? QHostAddress(ipv4).toString() : addr.toString();
+    Peer peer=peers[ipStr];
+    qDebug()<<peer.name<<" покинул чат";
+
+    // 2. Удаляем по ключу (строке)
+    if (peers.contains(ipStr)) {
+        qDebug() << "Удаляем пира из списка:" << peers[ipStr].name;
+        peers.remove(ipStr);
     }
 }
 

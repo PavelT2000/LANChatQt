@@ -24,6 +24,7 @@ private:
     void setAlive(QString name, QHostAddress ip);
     void sendAliveStatus();
     void timerTick();
+    void peerDisconected(QHostAddress &addr);
 
 
 signals:
