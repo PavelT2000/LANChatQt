@@ -28,6 +28,8 @@ private:
 
 
 signals:
+    void messageReceived(QString name, QString text);
+    void peersUpdated(const QMap<QString, Peer> &peers);
 };
 
 #endif // CHATENGINE_H

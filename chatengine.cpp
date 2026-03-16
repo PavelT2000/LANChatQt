@@ -4,7 +4,7 @@ ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
     :name(name), QObject{parent}
 {
     nm=new NetworkManager(port, this);
-    nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
+
     connect(nm, &NetworkManager::dataReceived, this, &ChatEngine::handlePocket);
     connect(nm, &NetworkManager::peerDisconnected, this, &ChatEngine::peerDisconected);
     aliveTimer = new QTimer(this);
@@ -23,7 +23,7 @@ void ChatEngine::handlePocket(const QByteArray &data, const QHostAddress &sender
         setAlive(msg.senderName,senderIp);
         break;
     case MessageType::MESSAGE:
-        qDebug()<<msg.content;
+        emit messageReceived(msg.senderName,msg.content);
         break;
     case MessageType::DEACTIVE:break;
 
@@ -34,7 +34,12 @@ void ChatEngine::setAlive(QString name, QHostAddress ip)
 {
     QString ipStr = ip.toString();
     if (peers.contains(ipStr)) {
-        peers[ipStr].name = name;
+        if(peers[ipStr].name != name)
+        {
+            peers[ipStr].name = name;
+            emit peersUpdated(peers);
+        }
+
         peers[ipStr].liveStatus =0;
     } else {
 
@@ -44,14 +49,15 @@ void ChatEngine::setAlive(QString name, QHostAddress ip)
         newPeer.liveStatus = 0;
         nm->establishConnection(newPeer.ip);
         peers.insert(ipStr, newPeer);
-
+        emit peersUpdated(peers);
+        sendAliveStatus();
         qDebug() << "Обнаружен новый узел:" << name << "[" << ipStr << "]";
     }
 }
 
 void ChatEngine::sendAliveStatus()
 {
-
+    nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
 }
 
 void ChatEngine::timerTick()
@@ -68,6 +74,7 @@ void ChatEngine::timerTick()
             qDebug() << "Удаляем замолчавшего:" << it.value().name;
             nm->disconnectIp(it.value().ip);
             it = peers.erase(it);
+            emit peersUpdated(peers);
         } else {
             ++it;
         }
@@ -86,6 +93,7 @@ void ChatEngine::peerDisconected(QHostAddress &addr)
     if (peers.contains(ipStr)) {
         qDebug() << "Удаляем пира из списка:" << peers[ipStr].name;
         peers.remove(ipStr);
+        emit peersUpdated(peers);
     }
 }
 
