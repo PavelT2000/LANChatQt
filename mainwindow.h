@@ -24,9 +24,8 @@ public:
 private slots:
     void on_pushButton_clicked();
 
-    void on_pushButton_2_clicked();
-
     void on_textEdit_textChanged();
+
 
 private:
     void updateUserList(const QMap<QString, Peer> &peers);

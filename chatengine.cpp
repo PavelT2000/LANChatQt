@@ -1,7 +1,7 @@
 #include "chatengine.h"
 
 ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
-    :name(name), QObject{parent}
+    :m_name(name), QObject{parent}
 {
     nm=new NetworkManager(port, this);
 
@@ -10,6 +10,21 @@ ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
     aliveTimer = new QTimer(this);
     connect(aliveTimer, &QTimer::timeout, this, &ChatEngine::timerTick);
     aliveTimer->start(5000);
+    emit peersUpdated(peers);
+    qDebug()<<"Конструктор чата";
+
+}
+
+QString ChatEngine::getName()
+{
+    return m_name;
+}
+
+void ChatEngine::setName(const QString & name)
+{
+
+    m_name=name;
+    emit peersUpdated(peers);
 }
 
 
@@ -57,13 +72,13 @@ void ChatEngine::setAlive(QString name, QHostAddress ip)
 
 void ChatEngine::sendAliveStatus()
 {
-    nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
+    nm->sendDataBroadcast(Packet(MessageType::ALIVE,m_name).toBytes());
 }
 
 void ChatEngine::timerTick()
 {
     qDebug()<<"HeartBeat";
-    nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
+    nm->sendDataBroadcast(Packet(MessageType::ALIVE,m_name).toBytes());
     auto it = peers.begin();
     while (it != peers.end()) {
         // Увеличиваем счетчик отсутствия
@@ -101,7 +116,7 @@ void ChatEngine::peerDisconected(QHostAddress &addr)
 
 void ChatEngine::sendMessage(QString text)
 {
-    Packet pkg(MessageType::MESSAGE, name, text);
+    Packet pkg(MessageType::MESSAGE, m_name, text);
     QByteArray data = pkg.toBytes();
 
     for (const Peer &peer : peers) {

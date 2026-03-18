@@ -6,6 +6,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    qDebug()<<"Запуск приложения";
+    chat=nullptr;
 
 }
 
@@ -15,7 +17,9 @@ MainWindow::~MainWindow()
 }
 
 void MainWindow::updateUserList(const QMap<QString, Peer> &peers) {
-    ui->listWidget->clear(); // Очищаем старый список
+    ui->listWidget->clear();
+    ui->listWidget->addItem(QString("%1 %2 (%3)")
+                                .arg("●", chat->getName(),"local"));
     for (const Peer &peer : peers) {
         QString status = (peer.liveStatus == 0) ? "●" : "○";
         ui->listWidget->addItem(QString("%1 %2 (%3)")
@@ -29,8 +33,26 @@ void MainWindow::displayMessage(QString name, QString text) {
 
 void MainWindow::on_textEdit_textChanged()
 {
-    chat = new ChatEngine(12345,ui->textEdit->toPlainText(),this);
-    connect(chat, &ChatEngine::messageReceived, this, &MainWindow::displayMessage);
-    connect(chat, &ChatEngine::peersUpdated, this, &MainWindow::updateUserList);
+    if(chat==nullptr)
+    {
+
+        chat = new ChatEngine(12345,ui->textEdit->toPlainText(),this);
+        qDebug()<<"чат создан имя:"<<chat->getName();
+        connect(chat, &ChatEngine::messageReceived, this, &MainWindow::displayMessage);
+        connect(chat, &ChatEngine::peersUpdated, this, &MainWindow::updateUserList);
+    }
+    else
+    {
+        chat->setName(ui->textEdit->toPlainText());
+        qDebug()<<"имя обновленно имя:"<<chat->getName();
+    }
+
+
+}
+
+
+void MainWindow::on_pushButton_clicked()
+{
+
 }
 

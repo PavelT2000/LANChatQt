@@ -4,19 +4,20 @@ NetworkManager::NetworkManager(ushort port, QObject *parent)
     : QObject(parent), m_port(port)
 {
     // Настройка UDP
-    udpSocket = new QUdpSocket(this);
-    udpSocket->bind(QHostAddress::Any, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
-    connect(udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
+    m_udpSocket = new QUdpSocket(this);
+    m_udpSocket->bind(QHostAddress::Any, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
+    connect(m_udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
 
     // Настройка TCP Сервера (ждем входящие)
-    tcpServer = new QTcpServer(this);
-    tcpServer->listen(QHostAddress::Any, m_port);
-    connect(tcpServer, &QTcpServer::newConnection, this, &NetworkManager::onNewTcpConnection);
+    m_tcpServer = new QTcpServer(this);
+    m_tcpServer->listen(QHostAddress::Any, m_port);
+    connect(m_tcpServer, &QTcpServer::newConnection, this, &NetworkManager::onNewTcpConnection);
+    qDebug()<<"Конструктор нетворк";
 }
 
 bool NetworkManager::sendDataBroadcast(const QByteArray &data)
 {
-    qint64 bytesSent = udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_port);
+    qint64 bytesSent = m_udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_port);
     return (bytesSent != -1);
 }
 
@@ -29,14 +30,14 @@ bool NetworkManager::sendDataTo(const QByteArray &data, const QHostAddress &targ
             return (bytesWritten != -1 && s->flush());
         }
     }
-    return false; // Пир с таким IP не найден в активных соединениях
+    return false;
 }
 
 
 
 void NetworkManager::onUdpReadyRead() {
-    while (udpSocket->hasPendingDatagrams()) {
-        QNetworkDatagram datagram = udpSocket->receiveDatagram();
+    while (m_udpSocket->hasPendingDatagrams()) {
+        QNetworkDatagram datagram = m_udpSocket->receiveDatagram();
         QHostAddress senderIp = datagram.senderAddress();
         bool ok;
         quint32 senderIpv4 = senderIp.toIPv4Address(&ok);
@@ -66,7 +67,7 @@ void NetworkManager::onUdpReadyRead() {
 }
 
 void NetworkManager::onNewTcpConnection() {
-    QTcpSocket *clientSocket = tcpServer->nextPendingConnection();
+    QTcpSocket *clientSocket = m_tcpServer->nextPendingConnection();
     tcpConnections.append(clientSocket);
     connect(clientSocket, &QTcpSocket::readyRead, this, &NetworkManager::onTcpReadyRead);
 }
