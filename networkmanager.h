@@ -28,6 +28,7 @@ public:
     void establishConnection(const QHostAddress &ip);
     void disconnectIp(QHostAddress ip);
 
+
 signals:
     // ПОЛУЧИТЬ(данные, пир_отправитель)
     void dataReceived(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
@@ -43,7 +44,9 @@ private:
     QUdpSocket *m_udpSocket;
     QTcpServer *m_tcpServer;
     QList<QTcpSocket*> tcpConnections;
+    QHostAddress m_myAddr;
     ushort m_port;
+    QHostAddress getMyAddr();
 
 };
 

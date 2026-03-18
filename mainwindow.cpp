@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <QNetworkInterface>
+#include <QHostAddress>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -10,6 +12,8 @@ MainWindow::MainWindow(QWidget *parent)
     chat=nullptr;
     connect(ui->lineEdit, &QLineEdit::returnPressed, this, &MainWindow::onSendMessage);
     connect(chat, &ChatEngine::messageReceived, this, &MainWindow::onMessageReceived);
+    const QList<QHostAddress> localhostAddresses = QNetworkInterface::allAddresses();
+    NetworkManager* nm=new NetworkManager(10000,this);
 }
 
 MainWindow::~MainWindow()

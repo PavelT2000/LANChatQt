@@ -3,21 +3,23 @@
 NetworkManager::NetworkManager(ushort port, QObject *parent)
     : QObject(parent), m_port(port)
 {
-    // Настройка UDP
     m_udpSocket = new QUdpSocket(this);
     m_udpSocket->bind(QHostAddress::Any, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
-    connect(m_udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
-
-    // Настройка TCP Сервера (ждем входящие)
     m_tcpServer = new QTcpServer(this);
     m_tcpServer->listen(QHostAddress::Any, m_port);
+    m_myAddr=getMyAddr();
+
+    connect(m_udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
     connect(m_tcpServer, &QTcpServer::newConnection, this, &NetworkManager::onNewTcpConnection);
-    qDebug()<<"Конструктор нетворк";
+
+    qDebug()<<"Конструктор networkManager адрес:"<<m_myAddr.toString()<<" порт:"<<m_port;
+
 }
 
 bool NetworkManager::sendDataBroadcast(const QByteArray &data)
 {
     qint64 bytesSent = m_udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_port);
+    qDebug()<<"Отправленно "<<bytesSent<<" байт данных через broadcast";
     return (bytesSent != -1);
 }
 
@@ -38,30 +40,10 @@ bool NetworkManager::sendDataTo(const QByteArray &data, const QHostAddress &targ
 void NetworkManager::onUdpReadyRead() {
     while (m_udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = m_udpSocket->receiveDatagram();
-        QHostAddress senderIp = datagram.senderAddress();
-        bool ok;
-        quint32 senderIpv4 = senderIp.toIPv4Address(&ok);
-        bool isOwnIp = false;
-        const QList<QHostAddress> localhostAddresses = QNetworkInterface::allAddresses();
-
-        for (const QHostAddress &address : localhostAddresses) {
-            bool localOk;
-            quint32 localIpv4 = address.toIPv4Address(&localOk);
-
-            if (ok && localOk && senderIpv4 == localIpv4) {
-                isOwnIp = true;
-                break;
-            }
-            if (senderIp == address) {
-                isOwnIp = true;
-                break;
-            }
-        }
-
-        if (isOwnIp) {
+        if(datagram.senderAddress()==m_myAddr)
+        {
             continue;
         }
-
         emit dataReceived(datagram.data(), senderIp, Protocol::UDP);
     }
 }
@@ -78,6 +60,22 @@ void NetworkManager::onTcpReadyRead() {
     if (s) {
         emit dataReceived(s->readAll(), s->peerAddress(), Protocol::TCP);
     }
+}
+
+QHostAddress NetworkManager::getMyAddr()
+{
+    QList<QHostAddress> addrs=QNetworkInterface::allAddresses();
+    for(QHostAddress &addr : addrs)
+    {
+        if(addr.protocol()==QHostAddress::IPv4Protocol &&
+            (addr.isInSubnet(QHostAddress::parseSubnet("192.168.0.0/16"))||
+            addr.isInSubnet(QHostAddress::parseSubnet("10.0.0.0/8")) ||
+            addr.isInSubnet(QHostAddress::parseSubnet("172.16.0.0/12"))))
+        {
+            return addr;
+        }
+    }
+    return QHostAddress();
 }
 
 void NetworkManager::establishConnection(const QHostAddress &ip) {

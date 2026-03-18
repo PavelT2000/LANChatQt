@@ -82,8 +82,9 @@ void ChatEngine::timerTick()
     nm->sendDataBroadcast(Packet(MessageType::ALIVE,m_name).toBytes());
     auto it = peers.begin();
     while (it != peers.end()) {
-
+        // Увеличиваем счетчик отсутствия
         it.value().liveStatus++;
+
         if (it.value().liveStatus > 2) {
             qDebug() << "Удаляем замолчавшего:" << it.value().name;
             nm->disconnectIp(it.value().ip);
