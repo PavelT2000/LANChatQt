@@ -1,15 +1,31 @@
 #include "chatengine.h"
 
 ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
-    :name(name), QObject{parent}
+    :m_name(name), QObject{parent}
 {
     nm=new NetworkManager(port, this);
 
     connect(nm, &NetworkManager::dataReceived, this, &ChatEngine::handlePocket);
     connect(nm, &NetworkManager::peerDisconnected, this, &ChatEngine::peerDisconected);
     aliveTimer = new QTimer(this);
+    timerTick();
     connect(aliveTimer, &QTimer::timeout, this, &ChatEngine::timerTick);
     aliveTimer->start(5000);
+    emit peersUpdated(peers);
+    qDebug()<<"Конструктор чата";
+
+}
+
+QString ChatEngine::getName()
+{
+    return m_name;
+}
+
+void ChatEngine::setName(const QString & name)
+{
+    timerTick();
+    m_name=name;
+    emit peersUpdated(peers);
 }
 
 
@@ -57,19 +73,17 @@ void ChatEngine::setAlive(QString name, QHostAddress ip)
 
 void ChatEngine::sendAliveStatus()
 {
-    nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
+    nm->sendDataBroadcast(Packet(MessageType::ALIVE,m_name).toBytes());
 }
 
 void ChatEngine::timerTick()
 {
     qDebug()<<"HeartBeat";
-    nm->sendDataBroadcast(Packet(MessageType::ALIVE,name).toBytes());
+    nm->sendDataBroadcast(Packet(MessageType::ALIVE,m_name).toBytes());
     auto it = peers.begin();
     while (it != peers.end()) {
-        // Увеличиваем счетчик отсутствия
-        it.value().liveStatus++;
 
-        // Если пир не подавал признаков жизни более 3-х проверок
+        it.value().liveStatus++;
         if (it.value().liveStatus > 2) {
             qDebug() << "Удаляем замолчавшего:" << it.value().name;
             nm->disconnectIp(it.value().ip);
@@ -101,7 +115,7 @@ void ChatEngine::peerDisconected(QHostAddress &addr)
 
 void ChatEngine::sendMessage(QString text)
 {
-    Packet pkg(MessageType::MESSAGE, name, text);
+    Packet pkg(MessageType::MESSAGE, m_name, text);
     QByteArray data = pkg.toBytes();
 
     for (const Peer &peer : peers) {

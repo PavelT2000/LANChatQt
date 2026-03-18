@@ -23,8 +23,6 @@ class NetworkManager : public QObject
 public:
     explicit NetworkManager(ushort port, QObject *parent = nullptr);
 
-    // ОТДАТЬ(данные, протокол, пир)
-    // Если для UDP пир не указан (Null), шлем Broadcast
     bool sendDataBroadcast(const QByteArray &data);
     bool sendDataTo(const QByteArray &data, const QHostAddress &targetIp);
     void establishConnection(const QHostAddress &ip);
@@ -42,8 +40,8 @@ private slots:
 
 
 private:
-    QUdpSocket *udpSocket;
-    QTcpServer *tcpServer;
+    QUdpSocket *m_udpSocket;
+    QTcpServer *m_tcpServer;
     QList<QTcpSocket*> tcpConnections;
     ushort m_port;
 

@@ -13,12 +13,14 @@ class ChatEngine : public QObject
     Q_OBJECT
 public:
     explicit ChatEngine(ushort port, QString name, QObject *parent = nullptr);
+    QString getName();
+    void setName (const QString &name);
     void sendMessage(QString text);
 
 private:
     NetworkManager * nm;
     QMap<QString,Peer> peers;
-    QString name;
+    QString m_name;
     QTimer *aliveTimer;
     void handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
     void setAlive(QString name, QHostAddress ip);

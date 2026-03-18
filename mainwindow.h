@@ -23,14 +23,15 @@ public:
 
 private slots:
     void on_pushButton_clicked();
-
-    void on_pushButton_2_clicked();
-
+    void onMessageReceived(QString name, QString text);
     void on_textEdit_textChanged();
+
 
 private:
     void updateUserList(const QMap<QString, Peer> &peers);
     void displayMessage(QString name, QString text);
+    void onSendMessage();
+
     Ui::MainWindow *ui;
     ChatEngine *chat;
 };
