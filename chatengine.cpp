@@ -8,6 +8,7 @@ ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
     connect(nm, &NetworkManager::dataReceived, this, &ChatEngine::handlePocket);
     connect(nm, &NetworkManager::peerDisconnected, this, &ChatEngine::peerDisconected);
     aliveTimer = new QTimer(this);
+    timerTick();
     connect(aliveTimer, &QTimer::timeout, this, &ChatEngine::timerTick);
     aliveTimer->start(5000);
     emit peersUpdated(peers);
