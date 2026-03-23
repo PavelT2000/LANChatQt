@@ -6,64 +6,66 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>970</width>
+    <height>635</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLineEdit" name="lineEdit">
+   <widget class="QLineEdit" name="leInputField">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>280</y>
-      <width>251</width>
-      <height>24</height>
+      <x>0</x>
+      <y>530</y>
+      <width>541</width>
+      <height>61</height>
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QTextEdit" name="teNameField">
     <property name="geometry">
      <rect>
-      <x>51</x>
-      <y>281</y>
-      <width>251</width>
-      <height>24</height>
+      <x>720</x>
+      <y>0</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnEnterMessage">
+    <property name="geometry">
+     <rect>
+      <x>540</x>
+      <y>530</y>
+      <width>181</width>
+      <height>61</height>
      </rect>
     </property>
     <property name="text">
      <string>PushButton</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit">
+   <widget class="QListWidget" name="lstPeers">
     <property name="geometry">
      <rect>
-      <x>260</x>
-      <y>30</y>
+      <x>540</x>
+      <y>0</y>
       <width>181</width>
-      <height>31</height>
+      <height>531</height>
      </rect>
     </property>
    </widget>
-   <widget class="QWidget" name="layoutWidget">
+   <widget class="QTextBrowser" name="tbChatField">
     <property name="geometry">
      <rect>
-      <x>51</x>
-      <y>81</y>
-      <width>520</width>
-      <height>194</height>
+      <x>0</x>
+      <y>0</y>
+      <width>541</width>
+      <height>531</height>
      </rect>
     </property>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QListWidget" name="listWidget"/>
-     </item>
-     <item>
-      <widget class="QTextBrowser" name="textBrowser"/>
-     </item>
-    </layout>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -71,8 +73,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
-     <height>21</height>
+     <width>970</width>
+     <height>23</height>
     </rect>
    </property>
   </widget>

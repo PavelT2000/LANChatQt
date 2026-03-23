@@ -18,15 +18,20 @@ public:
     void sendMessage(QString text);
 
 private:
-    NetworkManager * nm;
-    QMap<QString,Peer> peers;
+    NetworkManager * m_netMan;
+    QMap<QString,Peer> m_peers;
     QString m_name;
-    QTimer *aliveTimer;
+    QTimer *m_aliveTimer;
+
+private:
     void handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
-    void setAlive(QString name, QHostAddress ip);
+    void setAlivePeer(QString name, QHostAddress ip);
     void sendAliveStatus();
     void timerTick();
-    void peerDisconected(QHostAddress &addr);
+    void disconnectPeer(QHostAddress &addr);
+    void heartBeat();
+    void updatePeersState();
+
 
 
 signals:

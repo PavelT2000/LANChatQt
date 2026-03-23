@@ -19,20 +19,16 @@ NetworkManager::NetworkManager(ushort port, QObject *parent)
 bool NetworkManager::sendDataBroadcast(const QByteArray &data)
 {
     qint64 bytesSent = m_udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_port);
-    qDebug()<<"Отправленно "<<bytesSent<<" байт данных через broadcast";
+    qDebug()<<"Network manager:"<<"Отправленно "<<bytesSent<<" байт данных через broadcast";
     return (bytesSent != -1);
 }
 
-bool NetworkManager::sendDataTo(const QByteArray &data, const QHostAddress &targetIp)
+bool NetworkManager::sendDataTo(const QByteArray &data, QTcpSocket &target)
 {
-    for (QTcpSocket*  s : tcpConnections) {
-        if (s->peerAddress() == targetIp) {
-            qint64 bytesWritten = s->write(data);
-            s->flush();
-            return (bytesWritten != -1 && s->flush());
-        }
-    }
-    return false;
+    qint64 bytesWritten=target.write(data);
+    qDebug()<<"Network manager:"<<"Отправлено "<<bytesWritten<<" байт по "<<target.peerAddress();
+    return (bytesWritten != -1 && target.flush());
+
 }
 
 
@@ -44,21 +40,27 @@ void NetworkManager::onUdpReadyRead() {
         {
             continue;
         }
-        emit dataReceived(datagram.data(), senderIp, Protocol::UDP);
+        emit dataReceived(datagram.data(), datagram.senderAddress(), Protocol::UDP);
     }
 }
 
 void NetworkManager::onNewTcpConnection() {
     QTcpSocket *clientSocket = m_tcpServer->nextPendingConnection();
-    tcpConnections.append(clientSocket);
+
     connect(clientSocket, &QTcpSocket::readyRead, this, &NetworkManager::onTcpReadyRead);
+    emit peerConnected(*clientSocket);
 }
 
 void NetworkManager::onTcpReadyRead() {
-    qDebug() << "Tcp";
+
+
     QTcpSocket *s = qobject_cast<QTcpSocket*>(sender());
     if (s) {
-        emit dataReceived(s->readAll(), s->peerAddress(), Protocol::TCP);
+        QByteArray readData=s->readAll();
+        qDebug()<<"Read "<<readData.length()<<" bytes from"<<s->peerAddress();
+        qDebug()<<"Network manager:" <<
+            "Получено "<<readData.length()<<" байт от "<<s->peerAddress().toString();
+        emit dataReceived(readData, s->peerAddress(), Protocol::TCP);
     }
 }
 
@@ -78,46 +80,37 @@ QHostAddress NetworkManager::getMyAddr()
     return QHostAddress();
 }
 
-void NetworkManager::establishConnection(const QHostAddress &ip) {
-    for (QTcpSocket* s : tcpConnections)
-    {
-        if (s->peerAddress() == ip) return;
-    }
-    QTcpSocket *socket = new QTcpSocket(this);
-
-    connect(socket, &QTcpSocket::readyRead, this, &NetworkManager::onTcpReadyRead);
 
 
-    connect(socket, &QTcpSocket::disconnected, this, [this, socket]() {
-        QHostAddress addr = socket->peerAddress();
-        tcpConnections.removeAll(socket); // Удаляем из списка
-        emit peerDisconnected(addr);      // Уведомляем ChatEngine
-        socket->deleteLater();            // Безопасно удаляем объект
-    });
-
-    socket->connectToHost(ip, m_port);
-
-    tcpConnections.append(socket);
-    qDebug() << "Попытка установить связь с:" << ip.toString();
-}
-
-void NetworkManager::disconnectIp(QHostAddress ip)
+QTcpSocket& NetworkManager::setConnection(QHostAddress &addr)
 {
-    // Используем итератор, так как будем удалять элементы во время обхода
-    auto it = tcpConnections.begin();
-    while (it != tcpConnections.end()) {
-        QTcpSocket* socket = *it;
+    QTcpSocket *socket = new QTcpSocket(this);
+    socket->bind(addr,m_port);
+    return *socket;
 
-        // Сравниваем IP (учитывая возможные IPv6-префиксы)
-        if (socket->peerAddress().toIPv4Address() == ip.toIPv4Address()) {
-
-
-            socket->disconnectFromHost();
-
-            it = tcpConnections.erase(it);
-            socket->deleteLater();
-        } else {
-            ++it;
-        }
-    }
 }
+
+void NetworkManager::deleteConnection(QTcpSocket &target)
+{
+    target.disconnect();
+    delete &target;
+}
+
+// void NetworkManager::disconnectIp(QHostAddress ip)
+// {
+//     auto it = tcpConnections.begin();
+//     while (it != tcpConnections.end()) {
+//         QTcpSocket* socket = *it;
+
+//         if (socket->peerAddress().toIPv4Address() == ip.toIPv4Address()) {
+
+
+//             socket->disconnectFromHost();
+
+//             it = tcpConnections.erase(it);
+//             socket->deleteLater();
+//         } else {
+//             ++it;
+//         }
+//     }
+// }

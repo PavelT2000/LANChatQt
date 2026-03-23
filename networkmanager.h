@@ -10,7 +10,7 @@
 #include <QNetworkInterface>
 
 struct Peer {
-    QHostAddress ip;
+    QTcpSocket& socket;
     QString name;
     int liveStatus;
 };
@@ -24,14 +24,15 @@ public:
     explicit NetworkManager(ushort port, QObject *parent = nullptr);
 
     bool sendDataBroadcast(const QByteArray &data);
-    bool sendDataTo(const QByteArray &data, const QHostAddress &targetIp);
-    void establishConnection(const QHostAddress &ip);
-    void disconnectIp(QHostAddress ip);
+    bool sendDataTo(const QByteArray &data, QTcpSocket &target);
+    QTcpSocket& setConnection(QHostAddress &addr);
+    void deleteConnection(QTcpSocket &target);
+    // void disconnectIp(QHostAddress ip);
 
 
 signals:
-    // ПОЛУЧИТЬ(данные, пир_отправитель)
     void dataReceived(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
+    void peerConnected(QTcpSocket& socket);
     void peerDisconnected(QHostAddress &addr);
 
 private slots:
@@ -43,7 +44,6 @@ private slots:
 private:
     QUdpSocket *m_udpSocket;
     QTcpServer *m_tcpServer;
-    QList<QTcpSocket*> tcpConnections;
     QHostAddress m_myAddr;
     ushort m_port;
     QHostAddress getMyAddr();
@@ -51,4 +51,4 @@ private:
 };
 
 
-#endif // NETWORKMANAGER_H
+#endif

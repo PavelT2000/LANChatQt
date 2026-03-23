@@ -2,9 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QMap>
 #include "chatengine.h"
 
-#include <QMap>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
