@@ -13,7 +13,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          version: '5.15.2' # Или '6.5.0', если используете Qt6
+          version: '6.5.0' # Или '6.5.0', если используете Qt6
           host: 'windows'
           target: 'desktop'
           arch: 'win64_mingw81' # Для Qt5. Для Qt6 используйте 'win64_mingw'
