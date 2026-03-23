@@ -1,19 +1,27 @@
 #include "packet.h"
 #include <QIODevice>
+#include <QDataStream> // Обязательно добавь этот инклуд для работы со стримами
+
 Packet::Packet(MessageType t, QString name, QString msg)
     : type(t), senderName(name), content(msg) {}
 
 QByteArray Packet::toBytes() const {
     QByteArray buffer;
     QDataStream out(&buffer, QIODevice::WriteOnly);
-    out.setVersion(QDataStream::Qt_6_0);
+
+    // Используем версию 5.15 для совместимости с твоим GitHub Action
+    out.setVersion(QDataStream::Qt_5_15);
+
     out << static_cast<qint8>(type) << senderName << content;
     return buffer;
 }
 
 Packet Packet::fromBytes(const QByteArray &data) {
     QDataStream in(data);
-    in.setVersion(QDataStream::Qt_6_0);
+
+    // Версии при чтении и записи ДОЛЖНЫ совпадать
+    in.setVersion(QDataStream::Qt_5_15);
+
     qint8 t;
     QString n, c;
     in >> t >> n >> c;
