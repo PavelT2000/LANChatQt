@@ -23,8 +23,16 @@ jobs:
           qmake LANChatQt.pro
           mingw32-make
 
+      - name: Deploy Qt Dependencies
+        run: |
+          # Переходим в папку с собранным файлом
+          cd release
+          # Запускаем утилиту развертывания (она в PATH благодаря install-qt-action)
+          windeployqt --no-translations --compiler-runtime LANChatQt.exe
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-EXE
-          path: release/*.exe
+          name: LANChatQt-Windows-Standalone
+          path: release/ # Теперь загружаем ВСЮ папку, а не только .exe
+
