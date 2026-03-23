@@ -19,7 +19,7 @@ public:
 
 private:
     NetworkManager * m_netMan;
-    QMap<QString,Peer> m_peers;
+    QMap<QString,Peer*> m_peers;
     QString m_name;
     QTimer *m_aliveTimer;
 
@@ -36,7 +36,7 @@ private:
 
 signals:
     void messageReceived(QString name, QString text);
-    void peersUpdated(const QMap<QString, Peer> &peers);
+    void peersUpdated(const QMap<QString, Peer*> &peers);
 };
 
 #endif // CHATENGINE_H

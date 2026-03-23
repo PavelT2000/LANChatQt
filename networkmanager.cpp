@@ -36,7 +36,9 @@ bool NetworkManager::sendDataTo(const QByteArray &data, QTcpSocket &target)
 void NetworkManager::onUdpReadyRead() {
     while (m_udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = m_udpSocket->receiveDatagram();
-        if(datagram.senderAddress()==m_myAddr)
+        qDebug()<<"Network manager: "<<"get UDP from "<<datagram.senderAddress().toString();
+
+        if(datagram.senderAddress().isEqual(m_myAddr,QHostAddress::TolerantConversion))
         {
             continue;
         }

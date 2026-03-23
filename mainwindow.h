@@ -22,13 +22,13 @@ public:
 
 
 private slots:
-    void on_pushButton_clicked();
     void onMessageReceived(QString name, QString text);
-    void on_textEdit_textChanged();
 
+
+    void on_teNameField_textChanged();
 
 private:
-    void updateUserList(const QMap<QString, Peer> &peers);
+    void updateUserList(const QMap<QString, Peer*> &peers);
     void displayMessage(QString name, QString text);
     void onSendMessage();
 

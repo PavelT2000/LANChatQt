@@ -21,14 +21,14 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::updateUserList(const QMap<QString, Peer> &peers) {
+void MainWindow::updateUserList(const QMap<QString, Peer*> &peers) {
     ui->lstPeers->clear();
     ui->lstPeers->addItem(QString("%1 %2 (%3)")
                                 .arg("●", chat->getName(),"local"));
-    for (const Peer &peer : peers) {
-        QString status = (peer.liveStatus == 0) ? "●" : "○";
+    for (Peer *peer : peers) {
+        QString status = (peer->liveStatus == 0) ? "●" : "○";
         ui->lstPeers->addItem(QString("%1 %2 (%3)")
-                                    .arg(status, peer.name, peer.socket.peerAddress().toString()));
+                                    .arg(status, peer->name, peer->socket.peerAddress().toString()));
     }
 }
 void MainWindow::displayMessage(QString name, QString text) {
@@ -55,7 +55,7 @@ void MainWindow::onMessageReceived(QString name, QString text)
                                                  .arg(text));
 }
 
-void MainWindow::on_textEdit_textChanged()
+void MainWindow::on_teNameField_textChanged()
 {
     if(chat==nullptr)
     {
@@ -70,14 +70,5 @@ void MainWindow::on_textEdit_textChanged()
         chat->setName(ui->teNameField->toPlainText());
         qDebug()<<"имя обновленно имя:"<<chat->getName();
     }
-
-
-}
-
-
-
-void MainWindow::on_pushButton_clicked()
-{
-
 }
 

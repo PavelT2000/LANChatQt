@@ -55,7 +55,7 @@ void ChatEngine::setAlivePeer(QString newName, QHostAddress ip)
     qDebug()<<"ChatEngine: "<<"Получен HeartBeat от "<<ip.toString();
     auto it = m_peers.find(ip.toString());
     if (it != m_peers.end()) {
-        Peer& p = it.value(); // Работаем со ссылкой на существующий объект
+        Peer& p = *it.value();
         p.liveStatus=0;
         if(p.name!=newName)
         {
@@ -63,6 +63,9 @@ void ChatEngine::setAlivePeer(QString newName, QHostAddress ip)
             qDebug()<<"ChatEngine: "<<ip.toString()<<" сменил имя с "<<p.name<<" на "<<newName;
             p.name=newName;
         }
+    }
+    else{
+        m_peers.insert(ip.toString(),new Peer{m_netMan->setConnection(ip),newName,0});
     }
 }
 
@@ -85,10 +88,10 @@ void ChatEngine::disconnectPeer(QHostAddress &addr)
     QString ipStr = ok ? QHostAddress(ipv4).toString() : addr.toString();
     auto it = m_peers.find(ipStr);
     if (it != m_peers.end()) {
-        Peer peer=it.value();
-        qDebug()<<"ChatEngine:"<<peer.name<<" покинул чат";
+        Peer * peer=it.value();
+        qDebug()<<"ChatEngine:"<<peer->name<<" покинул чат";
         if (m_peers.contains(ipStr)) {
-            qDebug()<<"ChatEngine:" << "Удаляем пира из списка:" << peer.name;
+            qDebug()<<"ChatEngine:" << "Удаляем пира из списка:" << peer->name;
             m_peers.remove(ipStr);
             emit peersUpdated(m_peers);
         }
@@ -105,11 +108,11 @@ void ChatEngine::updatePeersState()
 {
     auto it = m_peers.begin();
     while (it != m_peers.end()) {
-        it.value().liveStatus++;
+        it.value()->liveStatus++;
 
-        if (it.value().liveStatus > 2) {
-            qDebug() <<"ChatEngine: "<<it->name<<"("<<it.key()<<") не ответил три раза, удаляем...";
-            m_netMan->deleteConnection(it->socket);
+        if (it.value()->liveStatus++ > 2) {
+            qDebug() <<"ChatEngine: "<<it.value()->name<<"("<<it.key()<<") не ответил три раза, удаляем...";
+            m_netMan->deleteConnection(it.value()->socket);
             it = m_peers.erase(it);
             emit peersUpdated(m_peers);
         } else {
@@ -123,9 +126,9 @@ void ChatEngine::sendMessage(QString text)
     Packet pkg(MessageType::MESSAGE, m_name, text);
     QByteArray data = pkg.toBytes();
 
-    for (const Peer &peer : m_peers) {
-        m_netMan->sendDataTo(data, peer.socket);
-        qDebug()<<"ChatEngine: " << "Отправлено сообщения для:" << peer.name << "на IP:" << peer.socket.peerAddress().toString();
+    for (Peer *peer : m_peers) {
+        m_netMan->sendDataTo(data, peer->socket);
+        qDebug()<<"ChatEngine: " << "Отправлено сообщения для:" << peer->name << "на IP:" << peer->socket.peerAddress().toString();
     }
 }
 
