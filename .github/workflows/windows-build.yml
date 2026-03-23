@@ -1,0 +1,30 @@
+name: Windows Build (Qt)
+
+on: [push, pull_request] # Запускать при каждом обновлении кода
+
+jobs:
+  build:
+    runs-on: windows-latest # Запускаем на сервере с Windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '5.15.2' # Или '6.5.0', если используете Qt6
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_mingw81' # Для Qt5. Для Qt6 используйте 'win64_mingw'
+
+      - name: Build project
+        run: |
+          qmake LANChatQt.pro
+          mingw32-make
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-EXE
+          path: release/*.exe
