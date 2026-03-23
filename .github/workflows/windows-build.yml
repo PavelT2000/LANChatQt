@@ -16,7 +16,7 @@ jobs:
           version: '6.5.0' # Или '6.5.0', если используете Qt6
           host: 'windows'
           target: 'desktop'
-          arch: 'win64_mingw81' # Для Qt5. Для Qt6 используйте 'win64_mingw'
+          arch: 'win64_mingw' # Для Qt5. Для Qt6 используйте 'win64_mingw'
 
       - name: Build project
         run: |
