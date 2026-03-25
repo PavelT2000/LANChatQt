@@ -28,7 +28,7 @@ void MainWindow::updateUserList(const QMap<QString, Peer*> &peers) {
     for (Peer *peer : peers) {
         QString status = (peer->liveStatus == 0) ? "●" : "○";
         ui->lstPeers->addItem(QString("%1 %2 (%3)")
-                                    .arg(status, peer->name, peer->socket.peerAddress().toString()));
+                                    .arg(status, peer->name, peer->socket->peerAddress().toString()));
     }
 }
 void MainWindow::displayMessage(QString name, QString text) {
@@ -69,6 +69,7 @@ void MainWindow::on_teNameField_textChanged()
     {
         chat->setName(ui->teNameField->toPlainText());
         qDebug()<<"имя обновленно имя:"<<chat->getName();
+        chat->heartBeat();
     }
 }
 

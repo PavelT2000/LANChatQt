@@ -10,7 +10,7 @@
 #include <QNetworkInterface>
 
 struct Peer {
-    QTcpSocket& socket;
+    QTcpSocket * socket;
     QString name;
     int liveStatus;
 };
@@ -25,7 +25,7 @@ public:
 
     bool sendDataBroadcast(const QByteArray &data);
     bool sendDataTo(const QByteArray &data, QTcpSocket &target);
-    QTcpSocket& setConnection(QHostAddress &addr);
+    QTcpSocket * setConnection(QHostAddress &addr);
     void deleteConnection(QTcpSocket &target);
     // void disconnectIp(QHostAddress ip);
 

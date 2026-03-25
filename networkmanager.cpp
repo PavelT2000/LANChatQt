@@ -84,11 +84,11 @@ QHostAddress NetworkManager::getMyAddr()
 
 
 
-QTcpSocket& NetworkManager::setConnection(QHostAddress &addr)
+QTcpSocket * NetworkManager::setConnection(QHostAddress &addr)
 {
     QTcpSocket *socket = new QTcpSocket(this);
-    socket->bind(addr,m_port);
-    return *socket;
+    socket->connectToHost(addr, m_port);
+    return socket;
 
 }
 

@@ -52,20 +52,23 @@ void ChatEngine::handlePocket(const QByteArray &data, const QHostAddress &sender
 
 void ChatEngine::setAlivePeer(QString newName, QHostAddress ip)
 {
-    qDebug()<<"ChatEngine: "<<"Получен HeartBeat от "<<ip.toString();
-    auto it = m_peers.find(ip.toString());
+    QString ipStr=ip.toString();
+    qDebug()<<"ChatEngine: "<<"Получен HeartBeat от "<<ipStr;
+    auto it = m_peers.find(ipStr);
     if (it != m_peers.end()) {
         Peer& p = *it.value();
         p.liveStatus=0;
         if(p.name!=newName)
         {
 
-            qDebug()<<"ChatEngine: "<<ip.toString()<<" сменил имя с "<<p.name<<" на "<<newName;
+            qDebug()<<"ChatEngine: "<<ipStr<<" сменил имя с "<<p.name<<" на "<<newName;
             p.name=newName;
+            emit peersUpdated(m_peers);
         }
     }
     else{
-        m_peers.insert(ip.toString(),new Peer{m_netMan->setConnection(ip),newName,0});
+        m_peers.insert(ipStr,new Peer{m_netMan->setConnection(ip),newName,0});
+        emit peersUpdated(m_peers);
     }
 }
 
@@ -112,7 +115,7 @@ void ChatEngine::updatePeersState()
 
         if (it.value()->liveStatus++ > 2) {
             qDebug() <<"ChatEngine: "<<it.value()->name<<"("<<it.key()<<") не ответил три раза, удаляем...";
-            m_netMan->deleteConnection(it.value()->socket);
+            m_netMan->deleteConnection(*it.value()->socket);
             it = m_peers.erase(it);
             emit peersUpdated(m_peers);
         } else {
@@ -127,8 +130,8 @@ void ChatEngine::sendMessage(QString text)
     QByteArray data = pkg.toBytes();
 
     for (Peer *peer : m_peers) {
-        m_netMan->sendDataTo(data, peer->socket);
-        qDebug()<<"ChatEngine: " << "Отправлено сообщения для:" << peer->name << "на IP:" << peer->socket.peerAddress().toString();
+        m_netMan->sendDataTo(data, *peer->socket);
+        qDebug()<<"ChatEngine: " << "Отправлено сообщения для:" << peer->name << "на IP:" << peer->socket->peerAddress().toString();
     }
 }
 

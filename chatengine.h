@@ -16,6 +16,7 @@ public:
     QString getName();
     void setName (const QString &name);
     void sendMessage(QString text);
+    void heartBeat();
 
 private:
     NetworkManager * m_netMan;
@@ -29,7 +30,7 @@ private:
     void sendAliveStatus();
     void timerTick();
     void disconnectPeer(QHostAddress &addr);
-    void heartBeat();
+
     void updatePeersState();
 
 
