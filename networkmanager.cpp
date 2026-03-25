@@ -95,7 +95,7 @@ QTcpSocket * NetworkManager::setConnection(QHostAddress &addr)
 void NetworkManager::deleteConnection(QTcpSocket &target)
 {
     target.disconnect();
-    delete &target;
+    target.deleteLater();
 }
 
 // void NetworkManager::disconnectIp(QHostAddress ip)

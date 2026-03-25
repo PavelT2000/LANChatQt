@@ -73,6 +73,7 @@ void ChatEngine::setAlivePeer(QString newName, QHostAddress ip)
             this->disconnectPeer(newPeer);
         });
         emit peersUpdated(m_peers);
+        heartBeat();
     }
 }
 
