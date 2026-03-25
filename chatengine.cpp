@@ -8,7 +8,6 @@ ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
     m_aliveTimer->start(5000);
 
     connect(m_netMan, &NetworkManager::dataReceived, this, &ChatEngine::handlePocket);
-    connect(m_netMan, &NetworkManager::peerDisconnected, this, &ChatEngine::disconnectPeer);
     connect(m_aliveTimer, &QTimer::timeout, this, &ChatEngine::timerTick);
 
 
@@ -32,7 +31,7 @@ void ChatEngine::setName(const QString & name)
 
 
 
-void ChatEngine::handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol)
+void ChatEngine::handlePocket(const QByteArray &data, const QHostAddress &senderIp)
 {
     Packet msg=Packet::fromBytes(data);
     switch(msg.type)
@@ -67,7 +66,12 @@ void ChatEngine::setAlivePeer(QString newName, QHostAddress ip)
         }
     }
     else{
-        m_peers.insert(ipStr,new Peer{m_netMan->setConnection(ip),newName,0});
+        QTcpSocket * socket=m_netMan->setConnection(ip);
+        Peer* newPeer = new Peer{socket, newName, 0};
+        m_peers.insert(ipStr, newPeer);
+        connect(socket, &QTcpSocket::disconnected, this, [this, newPeer]() {
+            this->disconnectPeer(newPeer);
+        });
         emit peersUpdated(m_peers);
     }
 }
@@ -84,20 +88,18 @@ void ChatEngine::timerTick()
 
 }
 
-void ChatEngine::disconnectPeer(QHostAddress &addr)
+void ChatEngine::disconnectPeer(Peer * peer)
 {
     bool ok;
+    QHostAddress addr=peer->socket->peerAddress();
     quint32 ipv4 = addr.toIPv4Address(&ok);
     QString ipStr = ok ? QHostAddress(ipv4).toString() : addr.toString();
+    m_netMan->deleteConnection(*peer->socket);
+    qDebug()<<"ChatEngine:"<<peer->name<<" покинул чат";
     auto it = m_peers.find(ipStr);
     if (it != m_peers.end()) {
-        Peer * peer=it.value();
-        qDebug()<<"ChatEngine:"<<peer->name<<" покинул чат";
-        if (m_peers.contains(ipStr)) {
-            qDebug()<<"ChatEngine:" << "Удаляем пира из списка:" << peer->name;
-            m_peers.remove(ipStr);
-            emit peersUpdated(m_peers);
-        }
+        m_peers.remove(ipStr);
+        emit peersUpdated(m_peers);
     }
 }
 
@@ -115,7 +117,7 @@ void ChatEngine::updatePeersState()
 
         if (it.value()->liveStatus++ > 2) {
             qDebug() <<"ChatEngine: "<<it.value()->name<<"("<<it.key()<<") не ответил три раза, удаляем...";
-            m_netMan->deleteConnection(*it.value()->socket);
+            disconnectPeer(it.value());
             it = m_peers.erase(it);
             emit peersUpdated(m_peers);
         } else {

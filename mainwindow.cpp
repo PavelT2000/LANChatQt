@@ -13,7 +13,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->leInputField, &QLineEdit::returnPressed, this, &MainWindow::onSendMessage);
     connect(chat, &ChatEngine::messageReceived, this, &MainWindow::onMessageReceived);
     const QList<QHostAddress> localhostAddresses = QNetworkInterface::allAddresses();
-    NetworkManager* nm=new NetworkManager(10000,this);
 }
 
 MainWindow::~MainWindow()

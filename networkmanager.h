@@ -33,7 +33,7 @@ public:
 signals:
     void dataReceived(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
     void peerConnected(QTcpSocket& socket);
-    void peerDisconnected(QHostAddress &addr);
+
 
 private slots:
     void onUdpReadyRead();

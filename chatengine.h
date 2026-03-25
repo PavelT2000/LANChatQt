@@ -25,11 +25,11 @@ private:
     QTimer *m_aliveTimer;
 
 private:
-    void handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
+    void handlePocket(const QByteArray &data, const QHostAddress &senderIp);
     void setAlivePeer(QString name, QHostAddress ip);
     void sendAliveStatus();
     void timerTick();
-    void disconnectPeer(QHostAddress &addr);
+    void disconnectPeer(Peer * addr);
 
     void updatePeersState();
 
