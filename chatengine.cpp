@@ -92,8 +92,8 @@ void ChatEngine::disconnectPeer(Peer * peer)
 {
     bool ok;
     QHostAddress addr=peer->socket->peerAddress();
-    quint32 ipv4 = addr.toIPv4Address(&ok);
-    QString ipStr = ok ? QHostAddress(ipv4).toString() : addr.toString();
+
+    QString ipStr = addr.toString();
     m_netMan->deleteConnection(*peer->socket);
     qDebug()<<"ChatEngine:"<<peer->name<<" покинул чат";
     auto it = m_peers.find(ipStr);
@@ -111,18 +111,20 @@ void ChatEngine::heartBeat()
 
 void ChatEngine::updatePeersState()
 {
-    auto it = m_peers.begin();
-    while (it != m_peers.end()) {
-        it.value()->liveStatus++;
+    QStringList toRemove;
 
-        if (it.value()->liveStatus++ > 2) {
-            qDebug() <<"ChatEngine: "<<it.value()->name<<"("<<it.key()<<") не ответил три раза, удаляем...";
-            disconnectPeer(it.value());
-            it = m_peers.erase(it);
-            emit peersUpdated(m_peers);
-        } else {
-            ++it;
+    // 1. Сначала только помечаем, кого надо удалить
+    for (auto it = m_peers.begin(); it != m_peers.end(); ++it) {
+        it.value()->liveStatus++;
+        if (it.value()->liveStatus > 3) { // допустим, 3 пропуска
+            toRemove << it.key();
         }
+    }
+
+    // 2. Вызываем удаление вне основного цикла итерации
+    for (const QString& ip : toRemove) {
+        qDebug() << "Таймер: удаляем за неактивность" << ip;
+        disconnectPeer(m_peers[ip]);
     }
 }
 
