@@ -24,6 +24,10 @@ public:
 private slots:
     void onMessageReceived(QString name, QString text);
 
+    void on_btnEnterMessage_clicked();
+
+    void on_leInputField_returnPressed();
+
 private:
     void updateUserList(const QMap<QString, Peer*> &peers);
     void displayMessage(QString name, QString text);

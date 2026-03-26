@@ -65,3 +65,15 @@ void MainWindow::onMessageReceived(QString name, QString text)
 
 
 
+
+void MainWindow::on_btnEnterMessage_clicked()
+{
+    onSendMessage();
+}
+
+
+void MainWindow::on_leInputField_returnPressed()
+{
+    onSendMessage();
+}
+
