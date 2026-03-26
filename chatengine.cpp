@@ -17,6 +17,8 @@ ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
 
 }
 
+
+
 QString ChatEngine::getName()
 {
     return m_name;
@@ -108,6 +110,11 @@ void ChatEngine::heartBeat()
 {
     qDebug()<<"ChatEngine: "<<"HeartBeat";
     m_netMan->sendDataBroadcast(Packet(MessageType::ALIVE,m_name).toBytes());
+}
+
+void ChatEngine::updatePeers()
+{
+    emit peersUpdated(m_peers);
 }
 
 void ChatEngine::updatePeersState()

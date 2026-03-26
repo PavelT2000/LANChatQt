@@ -1,6 +1,7 @@
 QT += widgets network
 
-CONFIG += c++17
+CONFIG += c++17, debug
+QMAKE_CXXFLAGS_DEBUG += -O0
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -8,6 +9,7 @@ CONFIG += c++17
 
 SOURCES += \
     chatengine.cpp \
+    enterance.cpp \
     main.cpp \
     mainwindow.cpp \
     networkmanager.cpp \
@@ -15,11 +17,13 @@ SOURCES += \
 
 HEADERS += \
     chatengine.h \
+    enterance.h \
     mainwindow.h \
     networkmanager.h \
     packet.h
 
 FORMS += \
+    enterance.ui \
     mainwindow.ui
 
 # Default rules for deployment.

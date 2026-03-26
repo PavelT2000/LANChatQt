@@ -19,13 +19,10 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
-
+    void initChat(QString name, ushort port );
 
 private slots:
     void onMessageReceived(QString name, QString text);
-
-
-    void on_teNameField_textChanged();
 
 private:
     void updateUserList(const QMap<QString, Peer*> &peers);

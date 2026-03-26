@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>970</width>
+    <width>734</width>
     <height>635</height>
    </rect>
   </property>
@@ -21,16 +21,6 @@
       <y>530</y>
       <width>541</width>
       <height>61</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QTextEdit" name="teNameField">
-    <property name="geometry">
-     <rect>
-      <x>720</x>
-      <y>0</y>
-      <width>181</width>
-      <height>31</height>
      </rect>
     </property>
    </widget>
@@ -73,8 +63,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>970</width>
-     <height>23</height>
+     <width>734</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>

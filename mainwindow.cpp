@@ -10,14 +10,23 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     qDebug()<<"Запуск приложения";
     chat=nullptr;
-    connect(ui->leInputField, &QLineEdit::returnPressed, this, &MainWindow::onSendMessage);
-    connect(chat, &ChatEngine::messageReceived, this, &MainWindow::onMessageReceived);
-    const QList<QHostAddress> localhostAddresses = QNetworkInterface::allAddresses();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::initChat(QString name, ushort port)
+{
+
+    chat = new ChatEngine(port,name,this);
+    connect(chat, &ChatEngine::messageReceived, this, &MainWindow::displayMessage);
+    connect(chat, &ChatEngine::peersUpdated, this, &MainWindow::updateUserList);
+    qDebug()<<"чат создан имя:"<<chat->getName();
+    chat->updatePeers();
+
+
 }
 
 void MainWindow::updateUserList(const QMap<QString, Peer*> &peers) {
@@ -54,21 +63,5 @@ void MainWindow::onMessageReceived(QString name, QString text)
                                                  .arg(text));
 }
 
-void MainWindow::on_teNameField_textChanged()
-{
-    if(chat==nullptr)
-    {
 
-        chat = new ChatEngine(12345,ui->teNameField->toPlainText(),this);
-        qDebug()<<"чат создан имя:"<<chat->getName();
-        connect(chat, &ChatEngine::messageReceived, this, &MainWindow::displayMessage);
-        connect(chat, &ChatEngine::peersUpdated, this, &MainWindow::updateUserList);
-    }
-    else
-    {
-        chat->setName(ui->teNameField->toPlainText());
-        qDebug()<<"имя обновленно имя:"<<chat->getName();
-        chat->heartBeat();
-    }
-}
 

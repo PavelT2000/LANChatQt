@@ -17,6 +17,7 @@ public:
     void setName (const QString &name);
     void sendMessage(QString text);
     void heartBeat();
+    void updatePeers();
 
 private:
     NetworkManager * m_netMan;

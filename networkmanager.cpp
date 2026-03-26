@@ -88,6 +88,15 @@ QTcpSocket * NetworkManager::setConnection(QHostAddress &addr)
 {
     QTcpSocket *socket = new QTcpSocket(this);
     socket->connectToHost(addr, m_port);
+    if(socket->waitForConnected(3000))
+    {
+        qDebug()<<"Yes";
+    }
+    else
+    {
+        qDebug()<<"No";
+    }
+    qDebug()<<socket->peerAddress().toString();
     return socket;
 
 }
