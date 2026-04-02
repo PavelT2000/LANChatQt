@@ -1,10 +1,10 @@
 name: Windows Build (Qt)
 
-on: [push, pull_request] # Запускать при каждом обновлении кода
+on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: windows-latest # Запускаем на сервере с Windows
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
@@ -13,18 +13,37 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          version: '5.15.2' # Или '6.5.0', если используете Qt6
+          # Убедитесь, что версия совпадает с той, что вы используете локально
+          version: '6.5.0' 
           host: 'windows'
           target: 'desktop'
-          arch: 'win64_mingw81' # Для Qt5. Для Qt6 используйте 'win64_mingw'
+          arch: 'win64_mingw' # 'win64_mingw' для Qt6, 'win64_mingw81' для Qt5
 
       - name: Build project
         run: |
           qmake LANChatQt.pro
-          mingw32-make
+          mingw32-make -j2
+
+      - name: Deploy Qt dependencies
+        run: |
+          # Ищем, где на самом деле лежит exe (в корне или в release)
+          $exePath = (Get-ChildItem -Recurse -Filter LANChatQt.exe | Select-Object -First 1).FullName
+          if (-not $exePath) { throw "LANChatQt.exe не найден!" }
+          
+          $exeDir = Split-Path -Parent $exePath
+          cd $exeDir
+          
+          # Запускаем утилиту развертывания
+          windeployqt --no-translations --compiler-runtime LANChatQt.exe
+        shell: pwsh
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windows-EXE
-          path: release/*.exe
+          # Загружаем всю папку, где лежит exe и все нужные dll
+          path: |
+            **/release/*.exe
+            **/release/*.dll
+            *.exe
+            *.dll
