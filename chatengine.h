@@ -31,6 +31,7 @@ private:
     void sendAliveStatus();
     void timerTick();
     void disconnectPeer(Peer * addr);
+    void disconnectPeerByIp(const QString &ipStr);
 
     void updatePeersState();
 

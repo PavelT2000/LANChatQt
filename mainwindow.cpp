@@ -48,6 +48,7 @@ void MainWindow::onSendMessage()
 {
     QString text = ui->leInputField->text();
     if (text.isEmpty()) return;
+    if (!chat) return;
 
     chat->sendMessage(text);
     ui->leInputField->clear();

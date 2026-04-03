@@ -25,7 +25,14 @@ bool NetworkManager::sendDataBroadcast(const QByteArray &data)
 
 bool NetworkManager::sendDataTo(const QByteArray &data, QTcpSocket &target)
 {
-    qint64 bytesWritten=target.write(data);
+    QByteArray framedData;
+    framedData.reserve(sizeof(quint32) + data.size());
+    QDataStream out(&framedData, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_5_15);
+    out << static_cast<quint32>(data.size());
+    framedData.append(data);
+
+    qint64 bytesWritten=target.write(framedData);
     qDebug()<<"Network manager:"<<"Отправлено "<<bytesWritten<<" байт по "<<target.peerAddress();
     return (bytesWritten != -1 && target.flush());
 
@@ -50,6 +57,12 @@ void NetworkManager::onNewTcpConnection() {
     QTcpSocket *clientSocket = m_tcpServer->nextPendingConnection();
 
     connect(clientSocket, &QTcpSocket::readyRead, this, &NetworkManager::onTcpReadyRead);
+    connect(clientSocket, &QTcpSocket::disconnected, this, [this, clientSocket]() {
+        m_tcpBuffers.remove(clientSocket);
+    });
+    connect(clientSocket, &QObject::destroyed, this, [this, clientSocket]() {
+        m_tcpBuffers.remove(clientSocket);
+    });
     emit peerConnected(*clientSocket);
 }
 
@@ -58,11 +71,32 @@ void NetworkManager::onTcpReadyRead() {
 
     QTcpSocket *s = qobject_cast<QTcpSocket*>(sender());
     if (s) {
-        QByteArray readData=s->readAll();
-        qDebug()<<"Read "<<readData.length()<<" bytes from"<<s->peerAddress();
-        qDebug()<<"Network manager:" <<
-            "Получено "<<readData.length()<<" байт от "<<s->peerAddress().toString();
-        emit dataReceived(readData, s->peerAddress(), Protocol::TCP);
+        QByteArray &buffer = m_tcpBuffers[s];
+        buffer.append(s->readAll());
+
+        while (true) {
+            if (buffer.size() < static_cast<int>(sizeof(quint32))) {
+                break;
+            }
+
+            QDataStream sizeStream(buffer);
+            sizeStream.setVersion(QDataStream::Qt_5_15);
+            quint32 payloadSize = 0;
+            sizeStream >> payloadSize;
+
+            const int frameSize = static_cast<int>(sizeof(quint32) + payloadSize);
+            if (buffer.size() < frameSize) {
+                break;
+            }
+
+            QByteArray readData = buffer.mid(sizeof(quint32), payloadSize);
+            buffer.remove(0, frameSize);
+
+            qDebug()<<"Read "<<readData.length()<<" bytes from"<<s->peerAddress();
+            qDebug()<<"Network manager:" <<
+                "Получено "<<readData.length()<<" байт от "<<s->peerAddress().toString();
+            emit dataReceived(readData, s->peerAddress(), Protocol::TCP);
+        }
     }
 }
 
@@ -88,13 +122,15 @@ QTcpSocket * NetworkManager::setConnection(QHostAddress &addr)
 {
     QTcpSocket *socket = new QTcpSocket(this);
     socket->connectToHost(addr, m_port);
-    if(socket->waitForConnected(3000))
+    if(socket->waitForConnected(1500))
     {
         qDebug()<<"Yes";
     }
     else
     {
         qDebug()<<"No";
+        socket->deleteLater();
+        return nullptr;
     }
     qDebug()<<socket->peerAddress().toString();
     return socket;

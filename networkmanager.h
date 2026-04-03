@@ -46,6 +46,7 @@ private:
     QTcpServer *m_tcpServer;
     QHostAddress m_myAddr;
     ushort m_port;
+    QMap<QTcpSocket*, QByteArray> m_tcpBuffers;
     QHostAddress getMyAddr();
 
 };

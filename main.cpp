@@ -13,5 +13,6 @@ int main(int argc, char *argv[])
         w.show();
         return a.exec();
     }
-    return QCoreApplication::exec();
+    // Если диалог отклонён, не запускаем event-loop без видимых окон.
+    return 0;
 }

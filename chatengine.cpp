@@ -26,8 +26,8 @@ QString ChatEngine::getName()
 
 void ChatEngine::setName(const QString & name)
 {
+    m_name = name;
     timerTick();
-    m_name=name;
     emit peersUpdated(m_peers);
 }
 
@@ -68,12 +68,23 @@ void ChatEngine::setAlivePeer(QString newName, QHostAddress ip)
         }
     }
     else{
-        QTcpSocket * socket=m_netMan->setConnection(ip);
+        QTcpSocket *socket = m_netMan->setConnection(ip);
+        if (!socket) {
+            qWarning() << "ChatEngine: не удалось создать TCP-соединение с" << ipStr;
+            return;
+        }
+
         Peer* newPeer = new Peer{socket, newName, 0};
         m_peers.insert(ipStr, newPeer);
-        connect(socket, &QTcpSocket::disconnected, this, [this, newPeer]() {
-            this->disconnectPeer(newPeer);
+
+        // Удаляем peer по IP, чтобы не зависеть от времени жизни указателя Peer*.
+        connect(socket, &QTcpSocket::disconnected, this, [this, ipStr]() {
+            this->disconnectPeerByIp(ipStr);
         });
+        connect(socket, &QTcpSocket::errorOccurred, this, [this, ipStr](QAbstractSocket::SocketError) {
+            this->disconnectPeerByIp(ipStr);
+        });
+
         emit peersUpdated(m_peers);
         heartBeat();
     }
@@ -87,23 +98,15 @@ void ChatEngine::sendAliveStatus()
 void ChatEngine::timerTick()
 {
     heartBeat();
-
-
+    updatePeersState();
 }
 
 void ChatEngine::disconnectPeer(Peer * peer)
 {
-    bool ok;
-    QHostAddress addr=peer->socket->peerAddress();
+    if (!peer || !peer->socket)
+        return;
 
-    QString ipStr = addr.toString();
-    m_netMan->deleteConnection(*peer->socket);
-    qDebug()<<"ChatEngine:"<<peer->name<<" покинул чат";
-    auto it = m_peers.find(ipStr);
-    if (it != m_peers.end()) {
-        m_peers.remove(ipStr);
-        emit peersUpdated(m_peers);
-    }
+    disconnectPeerByIp(peer->socket->peerAddress().toString());
 }
 
 void ChatEngine::heartBeat()
@@ -132,8 +135,27 @@ void ChatEngine::updatePeersState()
     // 2. Вызываем удаление вне основного цикла итерации
     for (const QString& ip : toRemove) {
         qDebug() << "Таймер: удаляем за неактивность" << ip;
-        disconnectPeer(m_peers[ip]);
+        disconnectPeerByIp(ip);
     }
+}
+
+void ChatEngine::disconnectPeerByIp(const QString &ipStr)
+{
+    auto it = m_peers.find(ipStr);
+    if (it == m_peers.end())
+        return;
+
+    Peer *peer = it.value();
+    if (peer) {
+        if (peer->socket) {
+            m_netMan->deleteConnection(*peer->socket);
+        }
+        qDebug() << "ChatEngine:" << peer->name << " покинул чат";
+        delete peer;
+    }
+
+    m_peers.erase(it);
+    emit peersUpdated(m_peers);
 }
 
 void ChatEngine::sendMessage(QString text)
