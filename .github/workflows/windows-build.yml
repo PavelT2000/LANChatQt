@@ -1,6 +1,10 @@
 name: Windows Build (Qt)
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
   build:
@@ -13,37 +17,37 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
-          # Убедитесь, что версия совпадает с той, что вы используете локально
-          version: '6.5.0' 
+          version: '6.5.0'
           host: 'windows'
           target: 'desktop'
-          arch: 'win64_mingw' # 'win64_mingw' для Qt6, 'win64_mingw81' для Qt5
+          arch: 'win64_mingw' 
+          # setup-python: false # Можно добавить для ускорения, если питон не нужен
 
       - name: Build project
+        shell: cmd
         run: |
-          qmake LANChatQt.pro
+          :: Создаем папку для сборки, чтобы гарантировать её наличие
+          if not exist release mkdir release
+          qmake LANChatQt.pro CONFIG+=release DESTDIR=release
           mingw32-make -j2
 
-      - name: Deploy Qt dependencies
-        run: |
-          # Ищем, где на самом деле лежит exe (в корне или в release)
-          $exePath = (Get-ChildItem -Recurse -Filter LANChatQt.exe | Select-Object -First 1).FullName
-          if (-not $exePath) { throw "LANChatQt.exe не найден!" }
-          
-          $exeDir = Split-Path -Parent $exePath
-          cd $exeDir
-          
-          # Запускаем утилиту развертывания
-          windeployqt --no-translations --compiler-runtime LANChatQt.exe
+      - name: Deploy Qt Dependencies
         shell: pwsh
+        run: |
+          # Проверяем наличие файла перед деплоем
+          if (Test-Path "release\LANChatQt.exe") {
+              cd release
+              windeployqt --no-translations --compiler-runtime LANChatQt.exe
+          } else {
+              Write-Error "LANChatQt.exe не найден в папке release. Проверьте логи сборки."
+              exit 1
+          }
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Windows-EXE
-          # Загружаем всю папку, где лежит exe и все нужные dll
-          path: |
-            **/release/*.exe
-            **/release/*.dll
-            *.exe
-            *.dll
+          name: LANChatQt-Windows-Standalone
+          # Загружаем содержимое папки release
+          path: release/
+          # Убираем лишний мусор, если он есть
+          if-no-files-found: error
