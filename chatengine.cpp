@@ -53,6 +53,7 @@ void ChatEngine::handlePocket(const QByteArray &data, const QHostAddress &sender
 
 void ChatEngine::setAlivePeer(QString newName, QHostAddress ip)
 {
+    if (ip.isLoopback()) return;
     QString ipStr=ip.toString();
     qDebug()<<"ChatEngine: "<<"Получен HeartBeat от "<<ipStr;
     auto it = m_peers.find(ipStr);

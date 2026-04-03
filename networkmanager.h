@@ -44,7 +44,7 @@ private slots:
 private:
     QUdpSocket *m_udpSocket;
     QTcpServer *m_tcpServer;
-    QHostAddress m_myAddr;
+    QList<QHostAddress> m_allLocalAddrs;
     ushort m_port;
     QMap<QTcpSocket*, QByteArray> m_tcpBuffers;
     QHostAddress getMyAddr();

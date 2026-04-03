@@ -7,12 +7,12 @@ NetworkManager::NetworkManager(ushort port, QObject *parent)
     m_udpSocket->bind(QHostAddress::Any, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     m_tcpServer = new QTcpServer(this);
     m_tcpServer->listen(QHostAddress::Any, m_port);
-    m_myAddr=getMyAddr();
+    m_allLocalAddrs = QNetworkInterface::allAddresses();
 
     connect(m_udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
     connect(m_tcpServer, &QTcpServer::newConnection, this, &NetworkManager::onNewTcpConnection);
 
-    qDebug()<<"Конструктор networkManager адрес:"<<m_myAddr.toString()<<" порт:"<<m_port;
+
 
 }
 
@@ -43,12 +43,17 @@ bool NetworkManager::sendDataTo(const QByteArray &data, QTcpSocket &target)
 void NetworkManager::onUdpReadyRead() {
     while (m_udpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = m_udpSocket->receiveDatagram();
+
         qDebug()<<"Network manager: "<<"get UDP from "<<datagram.senderAddress().toString();
 
-        if(datagram.senderAddress().isEqual(m_myAddr,QHostAddress::TolerantConversion))
-        {
-            continue;
+        bool isLocal = false;
+        for (const auto& localAddr : m_allLocalAddrs) {
+            if (datagram.senderAddress().isEqual(localAddr, QHostAddress::TolerantConversion)) {
+                isLocal = true;
+                break;
+            }
         }
+        if (isLocal) continue;
         emit dataReceived(datagram.data(), datagram.senderAddress(), Protocol::UDP);
     }
 }
