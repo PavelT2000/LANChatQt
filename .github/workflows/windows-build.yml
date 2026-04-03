@@ -1,6 +1,6 @@
   name: Windows Build (Qt)
 
-  on [push]
+  on: [push]
 
   jobs:
     build:
@@ -51,4 +51,4 @@
             # Загружаем содержимое папки release
             path: release/
             # Убираем лишний мусор, если он есть
-            if-no-files-found: error
+            if-no-files-found: errorg
