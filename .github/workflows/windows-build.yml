@@ -20,12 +20,17 @@
             # setup-python: false # Можно добавить для ускорения, если питон не нужен
 
         - name: Build project
-          shell: cmd
-          run: |
-            :: Создаем папку для сборки, чтобы гарантировать её наличие
-            if not exist release mkdir release
-            qmake LANChatQt.pro CONFIG+=release DESTDIR=release
-            mingw32-make -j2
+                shell: cmd
+                run: |
+                  :: Очищаем старые артефакты, если они были
+                  if exist debug rmdir /s /q debug
+                  if exist release rmdir /s /q release
+                  
+                  :: Запускаем qmake строго в режиме release
+                  qmake LANChatQt.pro CONFIG+=release
+                  
+                  :: Собираем проект
+                  mingw32-make -j2
 
         - name: Deploy Qt Dependencies
           shell: pwsh
