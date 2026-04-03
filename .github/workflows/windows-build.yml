@@ -1,53 +1,53 @@
-name: Windows Build (Qt)
+  name: Windows Build (Qt)
 
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  on:
+    push:
+      branches: [ main, master ]
+    pull_request:
+      branches: [ main, master ]
 
-jobs:
-  build:
-    runs-on: windows-latest
+  jobs:
+    build:
+      runs-on: windows-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: '6.5.0'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_mingw' 
-          # setup-python: false # Можно добавить для ускорения, если питон не нужен
+        - name: Install Qt
+          uses: jurplel/install-qt-action@v3
+          with:
+            version: '6.5.0'
+            host: 'windows'
+            target: 'desktop'
+            arch: 'win64_mingw' 
+            # setup-python: false # Можно добавить для ускорения, если питон не нужен
 
-      - name: Build project
-        shell: cmd
-        run: |
-          :: Создаем папку для сборки, чтобы гарантировать её наличие
-          if not exist release mkdir release
-          qmake LANChatQt.pro CONFIG+=release DESTDIR=release
-          mingw32-make -j2
+        - name: Build project
+          shell: cmd
+          run: |
+            :: Создаем папку для сборки, чтобы гарантировать её наличие
+            if not exist release mkdir release
+            qmake LANChatQt.pro CONFIG+=release DESTDIR=release
+            mingw32-make -j2
 
-      - name: Deploy Qt Dependencies
-        shell: pwsh
-        run: |
-          # Проверяем наличие файла перед деплоем
-          if (Test-Path "release\LANChatQt.exe") {
-              cd release
-              windeployqt --no-translations --compiler-runtime LANChatQt.exe
-          } else {
-              Write-Error "LANChatQt.exe не найден в папке release. Проверьте логи сборки."
-              exit 1
-          }
+        - name: Deploy Qt Dependencies
+          shell: pwsh
+          run: |
+            # Проверяем наличие файла перед деплоем
+            if (Test-Path "release\LANChatQt.exe") {
+                cd release
+                windeployqt --no-translations --compiler-runtime LANChatQt.exe
+            } else {
+                Write-Error "LANChatQt.exe не найден в папке release. Проверьте логи сборки."
+                exit 1
+            }
 
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: LANChatQt-Windows-Standalone
-          # Загружаем содержимое папки release
-          path: release/
-          # Убираем лишний мусор, если он есть
-          if-no-files-found: error
+        - name: Upload Build Artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: LANChatQt-Windows-Standalone
+            # Загружаем содержимое папки release
+            path: release/
+            # Убираем лишний мусор, если он есть
+            if-no-files-found: error
