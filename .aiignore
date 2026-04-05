@@ -1,0 +1,32 @@
+# Build directories
+build/
+build-*/
+debug/
+release/
+*.o
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.exe
+*.dll
+
+# Qt generated files
+Makefile*
+.qmake.stash
+ui_*.h
+moc_*.cpp
+qrc_*.cpp
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
