@@ -1,0 +1,576 @@
+=== PROJECT HIERARCHY ===
+├── .aiignore
+├── .github
+│   └── workflows
+│       └── windows-build.yml
+├── .gitignore
+├── LANChatQt.pro
+├── chatengine.cpp
+├── chatengine.h
+├── main.cpp
+├── mainwindow.cpp
+├── mainwindow.h
+├── mainwindow.ui
+├── networkmanager.cpp
+├── networkmanager.h
+├── packet.cpp
+└── packet.h
+
+=== SOURCE CODE ===
+
+--- FILE: LANChatQt.pro ---
+QT += widgets network
+
+CONFIG += c++17
+
+# You can make your code fail to compile if it uses deprecated APIs.
+# In order to do so, uncomment the following line.
+#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+
+SOURCES += \
+    chatengine.cpp \
+    main.cpp \
+    mainwindow.cpp \
+    networkmanager.cpp \
+    packet.cpp
+
+HEADERS += \
+    chatengine.h \
+    mainwindow.h \
+    networkmanager.h \
+    packet.h
+
+FORMS += \
+    mainwindow.ui
+
+# Default rules for deployment.
+qnx: target.path = /tmp/$${TARGET}/bin
+else: unix:!android: target.path = /opt/$${TARGET}/bin
+!isEmpty(target.path): INSTALLS += target
+
+
+--- FILE: mainwindow.h ---
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+
+#include <QMainWindow>
+#include "chatengine.h"
+
+#include <QMap>
+
+QT_BEGIN_NAMESPACE
+namespace Ui {
+class MainWindow;
+}
+QT_END_NAMESPACE
+
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+
+public:
+    explicit MainWindow(QWidget *parent = nullptr);
+    ~MainWindow() override;
+
+
+private slots:
+    void on_pushButton_clicked();
+    void onMessageReceived(QString name, QString text);
+    void on_textEdit_textChanged();
+
+
+private:
+    void updateUserList(const QMap<QString, Peer> &peers);
+    void displayMessage(QString name, QString text);
+    void onSendMessage();
+
+    Ui::MainWindow *ui;
+    ChatEngine *chat;
+};
+#endif // MAINWINDOW_H
+
+
+--- FILE: mainwindow.cpp ---
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
+{
+    ui->setupUi(this);
+    qDebug()<<"Запуск приложения";
+    chat=nullptr;
+    connect(ui->lineEdit, &QLineEdit::returnPressed, this, &MainWindow::onSendMessage);
+    connect(chat, &ChatEngine::messageReceived, this, &MainWindow::onMessageReceived);
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+void MainWindow::updateUserList(const QMap<QString, Peer> &peers) {
+    ui->listWidget->clear();
+    ui->listWidget->addItem(QString("%1 %2 (%3)")
+                                .arg("●", chat->getName(),"local"));
+    for (const Peer &peer : peers) {
+        QString status = (peer.liveStatus == 0) ? "●" : "○";
+        ui->listWidget->addItem(QString("%1 %2 (%3)")
+                                    .arg(status, peer.name, peer.ip.toString()));
+    }
+}
+void MainWindow::displayMessage(QString name, QString text) {
+    QString formattedMsg = QString("<b>%1:</b> %2").arg(name, text);
+    ui->textBrowser->append(formattedMsg);
+}
+
+void MainWindow::onSendMessage()
+{
+    QString text = ui->lineEdit->text();
+    if (text.isEmpty()) return;
+
+    chat->sendMessage(text);
+    ui->lineEdit->clear();
+    ui->textBrowser->append(QString("<b>%1:</b> <font color='green'>%2</font>")
+                                                 .arg(chat->getName())
+                                                 .arg(text));
+}
+
+void MainWindow::onMessageReceived(QString name, QString text)
+{
+    ui->textBrowser->append(QString("<b>%1:</b> <font color='green'>%2</font>")
+                                                 .arg(name)
+                                                 .arg(text));
+}
+
+void MainWindow::on_textEdit_textChanged()
+{
+    if(chat==nullptr)
+    {
+
+        chat = new ChatEngine(12345,ui->textEdit->toPlainText(),this);
+        qDebug()<<"чат создан имя:"<<chat->getName();
+        connect(chat, &ChatEngine::messageReceived, this, &MainWindow::displayMessage);
+        connect(chat, &ChatEngine::peersUpdated, this, &MainWindow::updateUserList);
+    }
+    else
+    {
+        chat->setName(ui->textEdit->toPlainText());
+        qDebug()<<"имя обновленно имя:"<<chat->getName();
+    }
+
+
+}
+
+
+
+void MainWindow::on_pushButton_clicked()
+{
+
+}
+
+
+
+--- FILE: chatengine.h ---
+#ifndef CHATENGINE_H
+#define CHATENGINE_H
+
+#include <QObject>
+#include <QMap>
+#include <QHostAddress>
+#include <QTimer>
+#include "networkmanager.h"
+#include "packet.h"
+
+class ChatEngine : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ChatEngine(ushort port, QString name, QObject *parent = nullptr);
+    QString getName();
+    void setName (const QString &name);
+    void sendMessage(QString text);
+
+private:
+    NetworkManager * nm;
+    QMap<QString,Peer> peers;
+    QString m_name;
+    QTimer *aliveTimer;
+    void handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
+    void setAlive(QString name, QHostAddress ip);
+    void sendAliveStatus();
+    void timerTick();
+    void peerDisconected(QHostAddress &addr);
+
+
+signals:
+    void messageReceived(QString name, QString text);
+    void peersUpdated(const QMap<QString, Peer> &peers);
+};
+
+#endif // CHATENGINE_H
+
+
+--- FILE: chatengine.cpp ---
+#include "chatengine.h"
+
+ChatEngine::ChatEngine(ushort port, QString name, QObject *parent)
+    :m_name(name), QObject{parent}
+{
+    nm=new NetworkManager(port, this);
+
+    connect(nm, &NetworkManager::dataReceived, this, &ChatEngine::handlePocket);
+    connect(nm, &NetworkManager::peerDisconnected, this, &ChatEngine::peerDisconected);
+    aliveTimer = new QTimer(this);
+    timerTick();
+    connect(aliveTimer, &QTimer::timeout, this, &ChatEngine::timerTick);
+    aliveTimer->start(5000);
+    emit peersUpdated(peers);
+    qDebug()<<"Конструктор чата";
+
+}
+
+QString ChatEngine::getName()
+{
+    return m_name;
+}
+
+void ChatEngine::setName(const QString & name)
+{
+    timerTick();
+    m_name=name;
+    emit peersUpdated(peers);
+}
+
+
+
+void ChatEngine::handlePocket(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol)
+{
+    Packet msg=Packet::fromBytes(data);
+    switch(msg.type)
+    {
+    case MessageType::ALIVE:
+        setAlive(msg.senderName,senderIp);
+        break;
+    case MessageType::MESSAGE:
+        emit messageReceived(msg.senderName,msg.content);
+        break;
+    case MessageType::DEACTIVE:break;
+
+    }
+}
+
+void ChatEngine::setAlive(QString name, QHostAddress ip)
+{
+    QString ipStr = ip.toString();
+    if (peers.contains(ipStr)) {
+        if(peers[ipStr].name != name)
+        {
+            peers[ipStr].name = name;
+            emit peersUpdated(peers);
+        }
+
+        peers[ipStr].liveStatus =0;
+    } else {
+
+        Peer newPeer;
+        newPeer.ip = ip;
+        newPeer.name = name;
+        newPeer.liveStatus = 0;
+        nm->establishConnection(newPeer.ip);
+        peers.insert(ipStr, newPeer);
+        emit peersUpdated(peers);
+        sendAliveStatus();
+        qDebug() << "Обнаружен новый узел:" << name << "[" << ipStr << "]";
+    }
+}
+
+void ChatEngine::sendAliveStatus()
+{
+    nm->sendDataBroadcast(Packet(MessageType::ALIVE,m_name).toBytes());
+}
+
+void ChatEngine::timerTick()
+{
+    qDebug()<<"HeartBeat";
+    nm->sendDataBroadcast(Packet(MessageType::ALIVE,m_name).toBytes());
+    auto it = peers.begin();
+    while (it != peers.end()) {
+
+        it.value().liveStatus++;
+        if (it.value().liveStatus > 2) {
+            qDebug() << "Удаляем замолчавшего:" << it.value().name;
+            nm->disconnectIp(it.value().ip);
+            it = peers.erase(it);
+            emit peersUpdated(peers);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void ChatEngine::peerDisconected(QHostAddress &addr)
+{
+    bool ok;
+    quint32 ipv4 = addr.toIPv4Address(&ok);
+    QString ipStr = ok ? QHostAddress(ipv4).toString() : addr.toString();
+    Peer peer=peers[ipStr];
+    qDebug()<<peer.name<<" покинул чат";
+
+    // 2. Удаляем по ключу (строке)
+    if (peers.contains(ipStr)) {
+        qDebug() << "Удаляем пира из списка:" << peers[ipStr].name;
+        peers.remove(ipStr);
+        emit peersUpdated(peers);
+    }
+}
+
+
+
+void ChatEngine::sendMessage(QString text)
+{
+    Packet pkg(MessageType::MESSAGE, m_name, text);
+    QByteArray data = pkg.toBytes();
+
+    for (const Peer &peer : peers) {
+        nm->sendDataTo(data, peer.ip);
+        qDebug() << "Отправка сообщения для:" << peer.name << "на IP:" << peer.ip.toString();
+    }
+}
+
+
+
+--- FILE: networkmanager.h ---
+#ifndef NETWORKMANAGER_H
+#define NETWORKMANAGER_H
+#include <QUdpSocket>
+#include <QObject>
+#include <QDebug>
+#include <QNetworkDatagram>
+#include <QHostAddress>
+#include <QTcpServer>
+#include <QTcpSocket>
+#include <QNetworkInterface>
+
+struct Peer {
+    QHostAddress ip;
+    QString name;
+    int liveStatus;
+};
+
+enum Protocol { TCP, UDP };
+
+class NetworkManager : public QObject
+{
+    Q_OBJECT
+public:
+    explicit NetworkManager(ushort port, QObject *parent = nullptr);
+
+    bool sendDataBroadcast(const QByteArray &data);
+    bool sendDataTo(const QByteArray &data, const QHostAddress &targetIp);
+    void establishConnection(const QHostAddress &ip);
+    void disconnectIp(QHostAddress ip);
+
+signals:
+    // ПОЛУЧИТЬ(данные, пир_отправитель)
+    void dataReceived(const QByteArray &data, const QHostAddress &senderIp, Protocol protocol);
+    void peerDisconnected(QHostAddress &addr);
+
+private slots:
+    void onUdpReadyRead();
+    void onNewTcpConnection();
+    void onTcpReadyRead();
+
+
+private:
+    QUdpSocket *m_udpSocket;
+    QTcpServer *m_tcpServer;
+    QList<QTcpSocket*> tcpConnections;
+    ushort m_port;
+
+};
+
+
+#endif // NETWORKMANAGER_H
+
+
+--- FILE: networkmanager.cpp ---
+#include "networkmanager.h"
+
+NetworkManager::NetworkManager(ushort port, QObject *parent)
+    : QObject(parent), m_port(port)
+{
+    // Настройка UDP
+    m_udpSocket = new QUdpSocket(this);
+    m_udpSocket->bind(QHostAddress::Any, m_port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
+    connect(m_udpSocket, &QUdpSocket::readyRead, this, &NetworkManager::onUdpReadyRead);
+
+    // Настройка TCP Сервера (ждем входящие)
+    m_tcpServer = new QTcpServer(this);
+    m_tcpServer->listen(QHostAddress::Any, m_port);
+    connect(m_tcpServer, &QTcpServer::newConnection, this, &NetworkManager::onNewTcpConnection);
+    qDebug()<<"Конструктор нетворк";
+}
+
+bool NetworkManager::sendDataBroadcast(const QByteArray &data)
+{
+    qint64 bytesSent = m_udpSocket->writeDatagram(data, QHostAddress::Broadcast, m_port);
+    return (bytesSent != -1);
+}
+
+bool NetworkManager::sendDataTo(const QByteArray &data, const QHostAddress &targetIp)
+{
+    for (QTcpSocket*  s : tcpConnections) {
+        if (s->peerAddress() == targetIp) {
+            qint64 bytesWritten = s->write(data);
+            s->flush();
+            return (bytesWritten != -1 && s->flush());
+        }
+    }
+    return false;
+}
+
+
+
+void NetworkManager::onUdpReadyRead() {
+    while (m_udpSocket->hasPendingDatagrams()) {
+        QNetworkDatagram datagram = m_udpSocket->receiveDatagram();
+        QHostAddress senderIp = datagram.senderAddress();
+        bool ok;
+        quint32 senderIpv4 = senderIp.toIPv4Address(&ok);
+        bool isOwnIp = false;
+        const QList<QHostAddress> localhostAddresses = QNetworkInterface::allAddresses();
+
+        for (const QHostAddress &address : localhostAddresses) {
+            bool localOk;
+            quint32 localIpv4 = address.toIPv4Address(&localOk);
+
+            if (ok && localOk && senderIpv4 == localIpv4) {
+                isOwnIp = true;
+                break;
+            }
+            if (senderIp == address) {
+                isOwnIp = true;
+                break;
+            }
+        }
+
+        if (isOwnIp) {
+            continue;
+        }
+
+        emit dataReceived(datagram.data(), senderIp, Protocol::UDP);
+    }
+}
+
+void NetworkManager::onNewTcpConnection() {
+    QTcpSocket *clientSocket = m_tcpServer->nextPendingConnection();
+    tcpConnections.append(clientSocket);
+    connect(clientSocket, &QTcpSocket::readyRead, this, &NetworkManager::onTcpReadyRead);
+}
+
+void NetworkManager::onTcpReadyRead() {
+    qDebug() << "Tcp";
+    QTcpSocket *s = qobject_cast<QTcpSocket*>(sender());
+    if (s) {
+        emit dataReceived(s->readAll(), s->peerAddress(), Protocol::TCP);
+    }
+}
+
+void NetworkManager::establishConnection(const QHostAddress &ip) {
+    for (QTcpSocket* s : tcpConnections)
+    {
+        if (s->peerAddress() == ip) return;
+    }
+    QTcpSocket *socket = new QTcpSocket(this);
+
+    connect(socket, &QTcpSocket::readyRead, this, &NetworkManager::onTcpReadyRead);
+
+
+    connect(socket, &QTcpSocket::disconnected, this, [this, socket]() {
+        QHostAddress addr = socket->peerAddress();
+        tcpConnections.removeAll(socket); // Удаляем из списка
+        emit peerDisconnected(addr);      // Уведомляем ChatEngine
+        socket->deleteLater();            // Безопасно удаляем объект
+    });
+
+    socket->connectToHost(ip, m_port);
+
+    tcpConnections.append(socket);
+    qDebug() << "Попытка установить связь с:" << ip.toString();
+}
+
+void NetworkManager::disconnectIp(QHostAddress ip)
+{
+    // Используем итератор, так как будем удалять элементы во время обхода
+    auto it = tcpConnections.begin();
+    while (it != tcpConnections.end()) {
+        QTcpSocket* socket = *it;
+
+        // Сравниваем IP (учитывая возможные IPv6-префиксы)
+        if (socket->peerAddress().toIPv4Address() == ip.toIPv4Address()) {
+
+
+            socket->disconnectFromHost();
+
+            it = tcpConnections.erase(it);
+            socket->deleteLater();
+        } else {
+            ++it;
+        }
+    }
+}
+
+--- FILE: packet.h ---
+#ifndef PACKET_H
+#define PACKET_H
+
+#include <QString>
+#include <QByteArray>
+#include <QDataStream>
+
+enum class MessageType : qint8 {
+    ALIVE = 0,
+    DEACTIVE = 1,
+    MESSAGE = 2
+};
+
+struct Packet {
+    MessageType type;
+    QString senderName;
+    QString content;
+
+    // Конструктор
+    Packet(MessageType t = MessageType::ALIVE, QString name = "", QString msg = "");
+
+    // Методы (только объявления)
+    QByteArray toBytes() const;
+    static Packet fromBytes(const QByteArray &data);
+};
+
+#endif // PACKET_H
+
+
+--- FILE: packet.cpp ---
+#include "packet.h"
+#include <QIODevice>
+Packet::Packet(MessageType t, QString name, QString msg)
+    : type(t), senderName(name), content(msg) {}
+
+QByteArray Packet::toBytes() const {
+    QByteArray buffer;
+    QDataStream out(&buffer, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_6_0);
+    out << static_cast<qint8>(type) << senderName << content;
+    return buffer;
+}
+
+Packet Packet::fromBytes(const QByteArray &data) {
+    QDataStream in(data);
+    in.setVersion(QDataStream::Qt_6_0);
+    qint8 t;
+    QString n, c;
+    in >> t >> n >> c;
+    return Packet(static_cast<MessageType>(t), n, c);
+}
